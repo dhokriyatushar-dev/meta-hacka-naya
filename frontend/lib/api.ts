@@ -1,4 +1,4 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://degree-checker-01-dupath-ai-backend.hf.space").replace(/\/+$/, "");
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const url = `${API_URL}${path}`;
