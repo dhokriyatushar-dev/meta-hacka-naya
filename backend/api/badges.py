@@ -119,10 +119,9 @@ async def get_student_badges(student_id: str):
     # Combine catalog with earned status
     badge_status = []
     for badge in BADGE_CATALOG:
-        badge_status.append({
-            **badge,
-            "earned": badge["id"] in earned_ids,
-        })
+        b = badge.copy()
+        b["earned"] = badge["id"] in earned_ids
+        badge_status.append(b)
 
     return {
         "earned_count": len([b for b in badge_status if b["earned"]]),
