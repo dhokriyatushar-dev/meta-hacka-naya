@@ -20,6 +20,7 @@ ENV API_BASE_URL=""
 ENV MODEL_NAME="gpt-4o-mini"
 ENV HF_TOKEN=""
 
-EXPOSE 8000
+# Hugging Face Spaces requires port 7860
+EXPOSE 7860
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
