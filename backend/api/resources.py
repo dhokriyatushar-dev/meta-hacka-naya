@@ -1,6 +1,7 @@
 """
 EduPath AI — Resources API
 Endpoints for fetching topic resources, tracking link clicks, and marking topics complete.
+Works for ANY topic name — not limited to the hardcoded topic graph.
 """
 import asyncio
 import logging
@@ -40,23 +41,36 @@ def _find_topic(topic_id: str):
     return None
 
 
+def _topic_name_from_id(topic_id: str) -> str:
+    """Convert a topic ID like 'flask_framework' to 'Flask Framework'."""
+    return topic_id.replace("_", " ").replace("-", " ").title()
+
+
 @router.get("/{topic_id}", response_model=TopicPageResponse)
 async def get_topic_resources(topic_id: str, student_id: str = ""):
     """
     Get resources and AI summary for a topic.
-    Returns ResourceCard list + AI-generated topic summary.
+    Works for ANY topic name — if not in the hardcoded graph, generates dynamically.
     """
     topic = _find_topic(topic_id)
-    if not topic:
-        raise HTTPException(status_code=404, detail=f"Topic '{topic_id}' not found")
+
+    # Determine topic name and field
+    if topic:
+        topic_name = topic.name
+        topic_field = topic.field
+    else:
+        # Dynamic topic — convert ID to readable name
+        topic_name = _topic_name_from_id(topic_id)
+        topic_field = "tech"  # default field
+        logger.info(f"Dynamic topic resolution: '{topic_id}' → '{topic_name}'")
 
     # Get student context for personalized summary
     student = student_manager.get(student_id) if student_id else None
-    field = student.target_field if student else topic.field
-    goal = student.learning_goal if student else f"Learn {topic.name}"
+    field = student.target_field if student else topic_field
+    goal = student.learning_goal if student else f"Learn {topic_name}"
 
-    # Fetch resources (cached, async)
-    raw_resources = await fetch_resources_async(topic.name, topic_id)
+    # Fetch resources via DuckDuckGo (works for ANY topic name)
+    raw_resources = await fetch_resources_async(topic_name, topic_id)
 
     resources = [
         ResourceCard(
@@ -70,20 +84,27 @@ async def get_topic_resources(topic_id: str, student_id: str = ""):
         for r in raw_resources
     ]
 
-    # Generate AI summary (cached)
-    ai_summary = await generate_topic_summary(topic.name, field, goal)
+    # Generate AI summary (works for ANY topic name)
+    ai_summary = await generate_topic_summary(topic_name, field, goal)
 
     # Check student state
     can_mark_complete = False
     quiz_unlocked = False
     if student:
-        can_mark_complete = topic_id in student.clicked_resource_links and \
-                            len(student.clicked_resource_links[topic_id]) > 0
-        quiz_unlocked = topic_id in student.topics_studied
+        # Check both the raw topic_id and normalized versions
+        clicked = student.clicked_resource_links
+        can_mark_complete = (
+            (topic_id in clicked and len(clicked[topic_id]) > 0) or
+            (topic_name.lower().replace(" ", "_") in clicked)
+        )
+        quiz_unlocked = (
+            topic_id in student.topics_studied or
+            topic_name.lower().replace(" ", "_") in student.topics_studied
+        )
 
     return TopicPageResponse(
         topic_id=topic_id,
-        topic_name=topic.name,
+        topic_name=topic_name,
         ai_summary=ai_summary,
         resources=resources,
         can_mark_complete=can_mark_complete,
@@ -96,11 +117,8 @@ async def record_link_click(topic_id: str, body: LinkClickRequest):
     """
     Record that a student clicked a resource link.
     Unlocks the 'Mark as Complete' button.
+    Works for any topic — no graph lookup needed.
     """
-    topic = TOPIC_GRAPH.get(topic_id)
-    if not topic:
-        raise HTTPException(status_code=404, detail=f"Topic '{topic_id}' not found")
-
     student = student_manager.get(body.student_id)
     if not student:
         raise HTTPException(status_code=404, detail=f"Student '{body.student_id}' not found")
@@ -119,12 +137,8 @@ async def mark_topic_complete(topic_id: str, body: MarkCompleteRequest):
     """
     Mark a topic as 'studied' (link clicked + student confirms).
     Only works if student has clicked at least one resource link.
-    Returns 403 if no link was clicked.
+    Works for any topic — no graph lookup needed.
     """
-    topic = TOPIC_GRAPH.get(topic_id)
-    if not topic:
-        raise HTTPException(status_code=404, detail=f"Topic '{topic_id}' not found")
-
     student = student_manager.get(body.student_id)
     if not student:
         raise HTTPException(status_code=404, detail=f"Student '{body.student_id}' not found")
@@ -138,8 +152,13 @@ async def mark_topic_complete(topic_id: str, body: MarkCompleteRequest):
                    "Please visit at least one course link first."
         )
 
+    topic_name = _topic_name_from_id(topic_id)
+    topic = _find_topic(topic_id)
+    if topic:
+        topic_name = topic.name
+
     return {
         "quiz_unlocked": True,
         "topic_id": topic_id,
-        "message": f"Topic '{topic.name}' marked as studied. Quiz is now unlocked!",
+        "message": f"Topic '{topic_name}' marked as studied. Quiz is now unlocked!",
     }

@@ -33,6 +33,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Project submission state
+  const [projectModal, setProjectModal] = useState<any>(null); // {title, description, type, requirements}
+  const [projectSubmission, setProjectSubmission] = useState("");
+  const [projectReport, setProjectReport] = useState<any>(null);
+  const [submittingProject, setSubmittingProject] = useState(false);
+
   useEffect(() => {
     const id = localStorage.getItem("edupath_student_id");
     if (id) {
@@ -53,7 +59,7 @@ export default function DashboardPage() {
   const generateRoadmap = async () => {
     setLoading(true);
     try {
-      const data = await apiPost("/api/roadmap/generate", { student_id: studentId });
+      const data = await apiPost("/api/roadmap/generate", { student_id: studentId, force_regenerate: true });
       setRoadmap(data);
     } catch (err: any) {
       setError(err.message);
@@ -127,6 +133,27 @@ export default function DashboardPage() {
     }
   };
 
+  const submitProject = async () => {
+    if (!projectModal || !projectSubmission.trim()) return;
+    setSubmittingProject(true);
+    try {
+      const data = await apiPost("/api/projects/submit", {
+        student_id: studentId,
+        project_title: projectModal.title,
+        project_description: projectModal.description || "",
+        project_type: projectModal.type || "mini_project",
+        submission_text: projectSubmission,
+        requirements: projectModal.requirements || [],
+      });
+      setProjectReport(data.evaluation);
+      loadStudentData(studentId);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmittingProject(false);
+    }
+  };
+
   useEffect(() => {
     if (!studentId) return;
     if (activeTab === "roadmap") loadRoadmap();
@@ -134,19 +161,10 @@ export default function DashboardPage() {
     if (activeTab === "career") loadCareer();
   }, [activeTab, studentId]);
 
-  // Helper: Convert a human-readable skill name to a topic_id
-  const skillToTopicId = (skill: string): string => {
-    return skill.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-  };
-
-  // Helper: Find the best matching topic ID for a week
+  // Helper: Convert a skill name to a URL-safe topic ID
   const getTopicIdForWeek = (week: any): string => {
-    // First try the skillsCovered array
-    if (week.skillsCovered && week.skillsCovered.length > 0) {
-      return skillToTopicId(week.skillsCovered[0]);
-    }
-    // Fall back to the title
-    return skillToTopicId(week.title);
+    const raw = week.skillsCovered?.[0] || week.title || "unknown";
+    return encodeURIComponent(raw.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'));
   };
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
@@ -178,7 +196,6 @@ export default function DashboardPage() {
           <span className="font-bold gradient-text">EduPath AI</span>
         </div>
 
-        {/* Student info */}
         {student && (
           <div className="px-4 py-3 rounded-xl mb-4" style={{ background: "var(--bg-card)" }}>
             <div className="text-sm font-bold">{student.name || "Student"}</div>
@@ -213,6 +230,147 @@ export default function DashboardPage() {
           <div className="mb-4 px-4 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "var(--accent-red)" }}>
             {error}
             <button onClick={() => setError("")} className="ml-4 font-bold">×</button>
+          </div>
+        )}
+
+        {/* ══════ PROJECT SUBMISSION MODAL ══════ */}
+        {projectModal && !projectReport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}>
+            <div className="glass-card p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">📤 Submit Project</h2>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{projectModal.title}</p>
+                </div>
+                <button onClick={() => { setProjectModal(null); setProjectSubmission(""); }} className="text-2xl">×</button>
+              </div>
+
+              {projectModal.description && (
+                <div className="p-3 rounded-lg mb-4" style={{ background: "var(--bg-primary)" }}>
+                  <div className="text-xs font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Project Description</div>
+                  <p className="text-sm">{projectModal.description}</p>
+                </div>
+              )}
+
+              {projectModal.requirements?.length > 0 && (
+                <div className="p-3 rounded-lg mb-4" style={{ background: "var(--bg-primary)" }}>
+                  <div className="text-xs font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Requirements</div>
+                  <ul className="text-sm space-y-1">
+                    {projectModal.requirements.map((r: string, i: number) => (
+                      <li key={i}>• {r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label className="text-sm font-bold block mb-2">Paste your GitHub repo URL or project files/code:</label>
+                <textarea
+                  className="w-full p-4 rounded-lg text-sm font-mono"
+                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", minHeight: "200px" }}
+                  placeholder={"https://github.com/yourusername/your-project\n\nOR paste your code / project description here...\n\nInclude:\n- What you built\n- Key features\n- Technologies used\n- How to run it"}
+                  value={projectSubmission}
+                  onChange={(e) => setProjectSubmission(e.target.value)}
+                />
+              </div>
+
+              <button
+                onClick={submitProject}
+                disabled={!projectSubmission.trim() || submittingProject}
+                className="glow-btn w-full disabled:opacity-50"
+              >
+                {submittingProject ? "🤖 AI is evaluating your project..." : "Submit for AI Evaluation →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ PROJECT REPORT MODAL ══════ */}
+        {projectReport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}>
+            <div className="glass-card p-8 max-w-3xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold">📊 AI Evaluation Report</h2>
+                <button onClick={() => { setProjectReport(null); setProjectModal(null); setProjectSubmission(""); }} className="text-2xl">×</button>
+              </div>
+
+              {/* Score & Grade */}
+              <div className="flex items-center gap-6 mb-6">
+                <div className="text-center">
+                  <div className="text-5xl font-bold gradient-text">{projectReport.score}%</div>
+                  <div className="text-sm" style={{ color: "var(--text-secondary)" }}>Score</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-5xl font-bold" style={{ color: projectReport.is_passing ? "var(--accent-green)" : "var(--accent-red)" }}>
+                    {projectReport.grade}
+                  </div>
+                  <div className="text-sm" style={{ color: "var(--text-secondary)" }}>Grade</div>
+                </div>
+                <div className="flex-1 p-4 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                  <p className="text-sm">{projectReport.overall_feedback}</p>
+                </div>
+              </div>
+
+              {/* Technical Analysis */}
+              {projectReport.technical_analysis && (
+                <div className="mb-6">
+                  <h3 className="font-bold mb-3">📋 Technical Analysis</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(projectReport.technical_analysis).map(([key, val]: [string, any]) => (
+                      <div key={key} className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold capitalize">{key.replace(/_/g, " ")}</span>
+                          <span className="text-xs font-bold" style={{ color: val.score >= 7 ? "var(--accent-green)" : val.score >= 5 ? "var(--accent-amber)" : "var(--accent-red)" }}>
+                            {val.score}/10
+                          </span>
+                        </div>
+                        <div className="progress-bar h-1.5 mb-1">
+                          <div className="progress-fill" style={{ width: `${val.score * 10}%` }} />
+                        </div>
+                        <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{val.feedback}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Strengths & Improvements */}
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 rounded-lg" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <h4 className="text-sm font-bold mb-2" style={{ color: "var(--accent-green)" }}>✅ Strengths</h4>
+                  <ul className="text-xs space-y-1">
+                    {projectReport.strengths?.map((s: string, i: number) => (
+                      <li key={i}>• {s}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <h4 className="text-sm font-bold mb-2" style={{ color: "var(--accent-amber)" }}>🔧 Improvements</h4>
+                  <ul className="text-xs space-y-1">
+                    {projectReport.improvements?.map((s: string, i: number) => (
+                      <li key={i}>• {s}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Next Steps */}
+              {projectReport.next_steps && (
+                <div className="p-4 rounded-lg mb-6" style={{ background: "var(--bg-primary)" }}>
+                  <h4 className="text-sm font-bold mb-2">🚀 Next Steps</h4>
+                  <ul className="text-xs space-y-1">
+                    {projectReport.next_steps.map((s: string, i: number) => (
+                      <li key={i}>→ {s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <button onClick={() => { setProjectReport(null); setProjectModal(null); setProjectSubmission(""); }}
+                className="glow-btn w-full">
+                Close Report
+              </button>
+            </div>
           </div>
         )}
 
@@ -266,16 +424,34 @@ export default function DashboardPage() {
                               className="text-xs px-3 py-1.5 rounded-lg font-bold text-center whitespace-nowrap" style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)" }}>
                               📚 Study Topic
                             </Link>
-                            <button onClick={() => { setActiveTab("quizzes"); generateQuiz(topicId); }}
+                            <button onClick={() => { setActiveTab("quizzes"); generateQuiz(decodeURIComponent(topicId)); }}
                               className="text-xs px-3 py-1.5 rounded-lg font-bold whitespace-nowrap" style={{ background: "rgba(34,197,94,0.15)", color: "var(--accent-green)" }}>
                               📝 Take Quiz
                             </button>
                           </div>
                         </div>
+
+                        {/* Mini Project */}
                         {week.mini_project && (
                           <div className="mt-3 p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                            <div className="text-xs font-bold" style={{ color: "var(--accent-amber)" }}>🛠️ Mini Project: {week.mini_project.title}</div>
-                            <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>{week.mini_project.description}</div>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs font-bold" style={{ color: "var(--accent-amber)" }}>🛠️ Mini Project: {week.mini_project.title}</div>
+                                <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>{week.mini_project.description}</div>
+                              </div>
+                              <button
+                                onClick={() => setProjectModal({
+                                  title: week.mini_project.title,
+                                  description: week.mini_project.description,
+                                  type: "mini_project",
+                                  requirements: week.mini_project.requirements || [],
+                                })}
+                                className="text-xs px-3 py-1.5 rounded-lg font-bold whitespace-nowrap ml-3"
+                                style={{ background: "rgba(245,158,11,0.2)", color: "var(--accent-amber)" }}
+                              >
+                                📤 Submit
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -315,15 +491,17 @@ export default function DashboardPage() {
                               ))}
                             </div>
                           )}
-                          {cap.skills_tested && (
-                            <div className="flex flex-wrap gap-1">
-                              {cap.skills_tested.map((skill: string, j: number) => (
-                                <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "rgba(79,110,247,0.1)", color: "var(--accent-blue)" }}>
-                                  ✓ {skill}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <button
+                            onClick={() => setProjectModal({
+                              title: cap.title,
+                              description: cap.description,
+                              type: "capstone",
+                              requirements: cap.requirements || [],
+                            })}
+                            className="glow-btn !text-sm w-full mt-2"
+                          >
+                            📤 Submit Capstone Project
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -349,9 +527,9 @@ export default function DashboardPage() {
               <div className="glass-card p-8 text-center">
                 <div className="text-4xl mb-4">📝</div>
                 <h3 className="text-lg font-bold mb-2">Take a Quiz</h3>
-                <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>Select a topic from your roadmap to test your knowledge.</p>
+                <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>Select a topic from your roadmap, or choose a common one below.</p>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {["python_basics", "data_structures", "machine_learning", "statistics", "web_development"].map((t) => (
+                  {["python_basics", "data_structures", "machine_learning", "flask_framework", "api_design", "web_development"].map((t) => (
                     <button key={t} onClick={() => generateQuiz(t)}
                       className="px-4 py-2 rounded-lg text-sm transition-all hover:scale-105"
                       style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
@@ -413,7 +591,6 @@ export default function DashboardPage() {
                   {quizResult.correct_answers}/{quizResult.total_questions} correct
                 </div>
 
-                {/* Download Notes / Resources */}
                 <div className="mb-6 p-4 rounded-xl" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
                   <h4 className="text-sm font-bold mb-2">📥 Download Study Resources</h4>
                   <div className="flex flex-wrap gap-2 justify-center">
@@ -428,12 +605,6 @@ export default function DashboardPage() {
                       className="px-4 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
                       style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)" }}>
                       📝 Study Notes
-                    </a>
-                    <a href={`https://www.google.com/search?q=${quiz?.topic_name?.replace(/ /g, '+')}+practice+exercises`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
-                      style={{ background: "rgba(34,197,94,0.15)", color: "var(--accent-green)" }}>
-                      🏋️ Practice Exercises
                     </a>
                   </div>
                 </div>

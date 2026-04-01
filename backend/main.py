@@ -13,6 +13,7 @@ from api.quiz import router as quiz_router
 from api.badges import router as badges_router
 from api.career import router as career_router
 from api.resources import router as resources_router
+from api.projects import router as projects_router
 from environment.curriculum import TOPIC_GRAPH, PROJECT_DB
 
 # Configure logging
@@ -42,6 +43,7 @@ app.include_router(quiz_router)
 app.include_router(badges_router)
 app.include_router(career_router)
 app.include_router(resources_router)
+app.include_router(projects_router)
 
 
 @app.get("/")

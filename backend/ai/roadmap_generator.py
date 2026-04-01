@@ -194,11 +194,61 @@ Return ONLY valid JSON following the predefined schema.
 
     try:
         roadmap = generate_json(ROADMAP_SYSTEM_PROMPT, user_prompt)
+        roadmap = _ensure_roadmap_structure(roadmap, target_field, learning_goal)
         return roadmap
     except Exception as e:
         logger.error(f"Roadmap generation failed: {e}")
         # Return a fallback roadmap
         return _generate_fallback_roadmap(target_field, weekly_hours, duration_weeks)
+
+
+def _ensure_roadmap_structure(roadmap: dict, field: str, goal: str) -> dict:
+    """Post-process the LLM roadmap to guarantee required structure."""
+    if not roadmap or "weeks" not in roadmap:
+        return roadmap
+
+    weeks = roadmap.get("weeks", [])
+
+    # Ensure mini_project every 3 weeks if missing
+    for i, week in enumerate(weeks):
+        if "mini_project" not in week:
+            week["mini_project"] = None
+        # Add mini project every 3rd week if LLM forgot
+        if (i + 1) % 3 == 0 and not week.get("mini_project"):
+            title = week.get("title", f"Week {i+1} topic")
+            skills = week.get("skillsCovered", [title])
+            week["mini_project"] = {
+                "title": f"Mini Project: Apply {title}",
+                "description": f"Build a small project demonstrating your understanding of {', '.join(skills[:2])}",
+                "requirements": skills[:3],
+            }
+
+    # Ensure capstone_projects exist (exactly 2)
+    if not roadmap.get("capstone_projects") or len(roadmap.get("capstone_projects", [])) < 2:
+        # Collect all skills from the roadmap
+        all_skills = []
+        for week in weeks:
+            all_skills.extend(week.get("skillsCovered", []))
+        unique_skills = list(dict.fromkeys(all_skills))  # preserve order, dedupe
+
+        roadmap["capstone_projects"] = [
+            {
+                "title": f"Capstone 1: {field.title()} Full-Stack Application",
+                "description": f"Build a comprehensive application combining all skills learned throughout the roadmap to achieve your goal: {goal}",
+                "expected_output": "Fully functional application with documentation, deployed and accessible via GitHub",
+                "requirements": unique_skills[:5] + ["Documentation", "Testing", "Deployment"],
+                "skills_tested": unique_skills[:6],
+            },
+            {
+                "title": f"Capstone 2: {field.title()} Portfolio & Presentation",
+                "description": f"Create a professional portfolio showcasing all your projects, write-ups, and learnings. Present your journey from beginner to job-ready {field} professional.",
+                "expected_output": "Portfolio website or PDF with project demos, code samples, and reflections",
+                "requirements": ["Portfolio creation", "Project documentation", "Technical writing", "Self-reflection"],
+                "skills_tested": unique_skills[:8],
+            },
+        ]
+
+    return roadmap
 
 
 def _generate_fallback_roadmap(field: str, weekly_hours: int, weeks: int) -> dict:

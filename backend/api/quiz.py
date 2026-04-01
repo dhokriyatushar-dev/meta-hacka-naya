@@ -1,6 +1,7 @@
 """
 EduPath AI — Quiz API
 Adaptive quiz generation, submission, and scoring.
+Generates quizzes via AI for ANY topic — not limited to hardcoded topics.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -28,21 +29,29 @@ class QuizSubmission(BaseModel):
     answers: List[int]  # User's selected option indices
 
 
+def _resolve_topic_name(topic_id: str) -> str:
+    """Resolve a topic ID to a human-readable name. Works for any topic."""
+    # Try exact match in graph
+    topic = TOPIC_GRAPH.get(topic_id)
+    if topic:
+        return topic.name
+    # Try normalized match
+    normalized = topic_id.lower().replace(" ", "_").replace("-", "_")
+    topic = TOPIC_GRAPH.get(normalized)
+    if topic:
+        return topic.name
+    # Fuzzy match
+    for tid, t in TOPIC_GRAPH.items():
+        if normalized in tid or tid in normalized or normalized.replace("_", " ") in t.name.lower():
+            return t.name
+    # Fall back to converting the ID itself into a readable name
+    return topic_id.replace("_", " ").replace("-", " ").title()
+
+
 @router.post("/generate")
 async def generate_topic_quiz(data: QuizRequest):
-    """Generate a quiz for a specific topic."""
-    # Fuzzy match the topic ID
-    topic = TOPIC_GRAPH.get(data.topic_id)
-    if not topic:
-        normalized = data.topic_id.lower().replace(" ", "_").replace("-", "_")
-        topic = TOPIC_GRAPH.get(normalized)
-    if not topic:
-        normalized = data.topic_id.lower().replace(" ", "_").replace("-", "_")
-        for tid, t in TOPIC_GRAPH.items():
-            if normalized in tid or tid in normalized or normalized.replace("_", " ") in t.name.lower():
-                topic = t
-                break
-    topic_name = topic.name if topic else data.topic_id.replace("_", " ").title()
+    """Generate an AI-powered quiz for any topic."""
+    topic_name = _resolve_topic_name(data.topic_id)
 
     quiz = generate_quiz(topic_name, data.difficulty, data.num_questions)
 
