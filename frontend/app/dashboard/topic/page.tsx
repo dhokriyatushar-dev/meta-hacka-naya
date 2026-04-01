@@ -177,6 +177,33 @@ function TopicContent() {
         })}
       </div>
 
+      {/* ── Download Resources Section ── */}
+      <h2 className="text-sm font-bold opacity-50 mb-4 tracking-wider">📥 DOWNLOAD NOTES & RESOURCES</h2>
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <a href={`https://www.google.com/search?q=${topicData.topic_name.replace(/ /g, '+')}+cheat+sheet+pdf`}
+          target="_blank" rel="noopener noreferrer"
+          className="glass-card p-5 text-center hover:scale-[1.02] transition-transform block">
+          <div className="text-2xl mb-2">📄</div>
+          <h3 className="font-bold text-sm mb-1">Cheat Sheet</h3>
+          <p className="text-[10px] opacity-60">Quick reference PDF for {topicData.topic_name}</p>
+        </a>
+        <a href={`https://www.google.com/search?q=${topicData.topic_name.replace(/ /g, '+')}+study+notes+pdf+free`}
+          target="_blank" rel="noopener noreferrer"
+          className="glass-card p-5 text-center hover:scale-[1.02] transition-transform block">
+          <div className="text-2xl mb-2">📝</div>
+          <h3 className="font-bold text-sm mb-1">Study Notes</h3>
+          <p className="text-[10px] opacity-60">Detailed notes & summaries to refer later</p>
+        </a>
+        <a href={`https://www.google.com/search?q=${topicData.topic_name.replace(/ /g, '+')}+practice+exercises+free`}
+          target="_blank" rel="noopener noreferrer"
+          className="glass-card p-5 text-center hover:scale-[1.02] transition-transform block">
+          <div className="text-2xl mb-2">🏋️</div>
+          <h3 className="font-bold text-sm mb-1">Practice Exercises</h3>
+          <p className="text-[10px] opacity-60">Hands-on exercises to test your skills</p>
+        </a>
+      </div>
+
+      {/* ── Mark Complete & Quiz Section ── */}
       <div className="glass-card p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h3 className="font-bold">Ready to take the quiz?</h3>

@@ -31,7 +31,17 @@ class QuizSubmission(BaseModel):
 @router.post("/generate")
 async def generate_topic_quiz(data: QuizRequest):
     """Generate a quiz for a specific topic."""
+    # Fuzzy match the topic ID
     topic = TOPIC_GRAPH.get(data.topic_id)
+    if not topic:
+        normalized = data.topic_id.lower().replace(" ", "_").replace("-", "_")
+        topic = TOPIC_GRAPH.get(normalized)
+    if not topic:
+        normalized = data.topic_id.lower().replace(" ", "_").replace("-", "_")
+        for tid, t in TOPIC_GRAPH.items():
+            if normalized in tid or tid in normalized or normalized.replace("_", " ") in t.name.lower():
+                topic = t
+                break
     topic_name = topic.name if topic else data.topic_id.replace("_", " ").title()
 
     quiz = generate_quiz(topic_name, data.difficulty, data.num_questions)

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { apiGet, apiPost } from "@/lib/api";
 
-type Tab = "roadmap" | "quizzes" | "projects" | "badges" | "career";
+type Tab = "roadmap" | "quizzes" | "badges" | "career";
 
 interface StudentData {
   name: string;
@@ -134,10 +134,24 @@ export default function DashboardPage() {
     if (activeTab === "career") loadCareer();
   }, [activeTab, studentId]);
 
+  // Helper: Convert a human-readable skill name to a topic_id
+  const skillToTopicId = (skill: string): string => {
+    return skill.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  };
+
+  // Helper: Find the best matching topic ID for a week
+  const getTopicIdForWeek = (week: any): string => {
+    // First try the skillsCovered array
+    if (week.skillsCovered && week.skillsCovered.length > 0) {
+      return skillToTopicId(week.skillsCovered[0]);
+    }
+    // Fall back to the title
+    return skillToTopicId(week.title);
+  };
+
   const TABS: { id: Tab; icon: string; label: string }[] = [
     { id: "roadmap", icon: "🗺️", label: "Roadmap" },
     { id: "quizzes", icon: "📝", label: "Quizzes" },
-    { id: "projects", icon: "🛠️", label: "Projects" },
     { id: "badges", icon: "🏆", label: "Badges" },
     { id: "career", icon: "💼", label: "Career" },
   ];
@@ -216,47 +230,105 @@ export default function DashboardPage() {
             </div>
 
             {roadmap?.weeks ? (
-              <div className="space-y-4">
-                {roadmap.weeks.map((week: any, i: number) => (
-                  <div key={i} className="glass-card p-6" style={{ animationDelay: `${i * 0.05}s` }}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(79,110,247,0.2)", color: "var(--accent-blue)" }}>
-                            Week {week.weekNumber || i + 1}
-                          </span>
-                          <h3 className="font-bold">{week.title}</h3>
-                        </div>
-                        {week.learningObjectives && (
-                          <ul className="text-sm space-y-1 ml-4" style={{ color: "var(--text-secondary)" }}>
-                            {week.learningObjectives.map((obj: string, j: number) => (
-                              <li key={j}>• {obj}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {week.skillsCovered && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {week.skillsCovered.map((skill: string, j: number) => (
-                              <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)" }}>
-                                {skill}
+              <div>
+                <div className="space-y-4">
+                  {roadmap.weeks.map((week: any, i: number) => {
+                    const topicId = getTopicIdForWeek(week);
+                    return (
+                      <div key={i} className="glass-card p-6" style={{ animationDelay: `${i * 0.05}s` }}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(79,110,247,0.2)", color: "var(--accent-blue)" }}>
+                                Week {week.weekNumber || i + 1}
                               </span>
-                            ))}
+                              <h3 className="font-bold">{week.title}</h3>
+                            </div>
+                            {week.learningObjectives && (
+                              <ul className="text-sm space-y-1 ml-4" style={{ color: "var(--text-secondary)" }}>
+                                {week.learningObjectives.map((obj: string, j: number) => (
+                                  <li key={j}>• {obj}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {week.skillsCovered && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {week.skillsCovered.map((skill: string, j: number) => (
+                                  <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)" }}>
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 ml-4">
+                            <Link href={`/dashboard/topic?id=${topicId}`}
+                              className="text-xs px-3 py-1.5 rounded-lg font-bold text-center whitespace-nowrap" style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)" }}>
+                              📚 Study Topic
+                            </Link>
+                            <button onClick={() => { setActiveTab("quizzes"); generateQuiz(topicId); }}
+                              className="text-xs px-3 py-1.5 rounded-lg font-bold whitespace-nowrap" style={{ background: "rgba(34,197,94,0.15)", color: "var(--accent-green)" }}>
+                              📝 Take Quiz
+                            </button>
+                          </div>
+                        </div>
+                        {week.mini_project && (
+                          <div className="mt-3 p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                            <div className="text-xs font-bold" style={{ color: "var(--accent-amber)" }}>🛠️ Mini Project: {week.mini_project.title}</div>
+                            <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>{week.mini_project.description}</div>
                           </div>
                         )}
                       </div>
-                      <Link href={`/dashboard/topic?id=${week.skillsCovered?.[0] || week.title.toLowerCase().replace(/ /g, '_')}`}
-                        className="text-xs px-3 py-1 rounded-lg font-bold" style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)" }}>
-                        Study Topic →
-                      </Link>
-                    </div>
-                    {week.mini_project && (
-                      <div className="mt-3 p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                        <div className="text-xs font-bold" style={{ color: "var(--accent-amber)" }}>🛠️ Mini Project: {week.mini_project.title}</div>
-                        <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>{week.mini_project.description}</div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Capstone Projects Section ── */}
+                {roadmap.capstone_projects && roadmap.capstone_projects.length > 0 && (
+                  <div className="mt-10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <span className="text-2xl">🏆</span>
+                      <div>
+                        <h2 className="text-xl font-bold">Capstone Projects</h2>
+                        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Complete these to demonstrate mastery & earn your final badges</p>
                       </div>
-                    )}
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {roadmap.capstone_projects.map((cap: any, i: number) => (
+                        <div key={i} className="glass-card p-6 relative overflow-hidden" style={{ border: "1px solid rgba(245,158,11,0.3)" }}>
+                          <div className="absolute top-0 right-0 px-3 py-1 rounded-bl-lg text-[10px] font-bold" style={{ background: "rgba(245,158,11,0.2)", color: "var(--accent-amber)" }}>
+                            CAPSTONE {i + 1}
+                          </div>
+                          <h3 className="font-bold text-lg mb-2 mt-2">{cap.title}</h3>
+                          <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>{cap.description}</p>
+                          {cap.expected_output && (
+                            <div className="text-xs mb-3 p-2 rounded" style={{ background: "var(--bg-primary)" }}>
+                              <span className="font-bold">Expected Output:</span> {cap.expected_output}
+                            </div>
+                          )}
+                          {cap.requirements && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {cap.requirements.map((req: string, j: number) => (
+                                <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)" }}>
+                                  {req}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {cap.skills_tested && (
+                            <div className="flex flex-wrap gap-1">
+                              {cap.skills_tested.map((skill: string, j: number) => (
+                                <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "rgba(79,110,247,0.1)", color: "var(--accent-blue)" }}>
+                                  ✓ {skill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             ) : (
               <div className="glass-card p-12 text-center">
@@ -283,7 +355,7 @@ export default function DashboardPage() {
                     <button key={t} onClick={() => generateQuiz(t)}
                       className="px-4 py-2 rounded-lg text-sm transition-all hover:scale-105"
                       style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-                      {t.replace("_", " ")}
+                      {t.replace(/_/g, " ")}
                     </button>
                   ))}
                 </div>
@@ -340,6 +412,32 @@ export default function DashboardPage() {
                 <div className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
                   {quizResult.correct_answers}/{quizResult.total_questions} correct
                 </div>
+
+                {/* Download Notes / Resources */}
+                <div className="mb-6 p-4 rounded-xl" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
+                  <h4 className="text-sm font-bold mb-2">📥 Download Study Resources</h4>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <a href={`https://www.google.com/search?q=${quiz?.topic_name?.replace(/ /g, '+')}+cheat+sheet+pdf`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                      style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)" }}>
+                      📄 Cheat Sheet
+                    </a>
+                    <a href={`https://www.google.com/search?q=${quiz?.topic_name?.replace(/ /g, '+')}+study+notes+pdf`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                      style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)" }}>
+                      📝 Study Notes
+                    </a>
+                    <a href={`https://www.google.com/search?q=${quiz?.topic_name?.replace(/ /g, '+')}+practice+exercises`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                      style={{ background: "rgba(34,197,94,0.15)", color: "var(--accent-green)" }}>
+                      🏋️ Practice Exercises
+                    </a>
+                  </div>
+                </div>
+
                 <div className="flex gap-3 justify-center">
                   <button onClick={() => { setQuiz(null); setQuizResult(null); }} className="glow-btn !text-sm">
                     Take Another Quiz
@@ -356,53 +454,25 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ PROJECTS TAB ═══ */}
-        {activeTab === "projects" && (
-          <div>
-            <h1 className="text-2xl font-bold mb-6">🛠️ Project Milestones</h1>
-            <div className="grid md:grid-cols-2 gap-4">
-              {[
-                { title: "CLI Calculator", desc: "Build a command-line calculator", skills: ["Python basics"], type: "Mini" },
-                { title: "To-Do List App", desc: "Create a to-do list with file persistence", skills: ["OOP"], type: "Mini" },
-                { title: "Data Analysis Dashboard", desc: "Analyze a dataset and create visualizations", skills: ["Pandas", "Matplotlib"], type: "Mini" },
-                { title: "ML Classification Model", desc: "Build and evaluate a classification model", skills: ["Scikit-learn"], type: "Capstone", highlight: true },
-                { title: "REST API Project", desc: "Build a full REST API with auth", skills: ["FastAPI", "Database"], type: "Mini" },
-                { title: "Full-Stack Application", desc: "Complete web app with frontend and backend", skills: ["Full Stack"], type: "Capstone", highlight: true },
-              ].map((proj, i) => (
-                <div key={i} className="glass-card p-6" style={proj.highlight ? { border: "1px solid var(--accent-amber)" } : {}}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{
-                      background: proj.highlight ? "rgba(245,158,11,0.2)" : "rgba(79,110,247,0.15)",
-                      color: proj.highlight ? "var(--accent-amber)" : "var(--accent-blue)",
-                    }}>{proj.type}</span>
-                    <h3 className="font-bold">{proj.title}</h3>
-                  </div>
-                  <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>{proj.desc}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {proj.skills.map((s, j) => (
-                      <span key={j} className="px-2 py-0.5 rounded text-[10px]" style={{ background: "var(--bg-primary)", color: "var(--text-secondary)" }}>
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ═══ BADGES TAB ═══ */}
         {activeTab === "badges" && (
           <div>
-            <h1 className="text-2xl font-bold mb-6">🏆 Badges & Achievements</h1>
+            <h1 className="text-2xl font-bold mb-2">🏆 Badges & Achievements</h1>
+            <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>Collect them all to prove your mastery!</p>
             {badges ? (
               <div>
-                <p className="mb-6" style={{ color: "var(--text-secondary)" }}>
-                  {badges.earned_count}/{badges.total_count} badges earned
-                </p>
+                <div className="glass-card p-4 mb-6 flex items-center justify-between">
+                  <div>
+                    <span className="text-2xl font-bold gradient-text">{badges.earned_count}</span>
+                    <span className="text-sm ml-2" style={{ color: "var(--text-secondary)" }}>/ {badges.total_count} badges earned</span>
+                  </div>
+                  <div className="progress-bar w-48">
+                    <div className="progress-fill" style={{ width: `${(badges.earned_count / badges.total_count) * 100}%` }} />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {badges.badges?.map((badge: any, i: number) => (
-                    <div key={i} className={`p-4 rounded-2xl text-center transition-all ${badge.earned ? "badge-earned" : "badge-locked"}`}>
+                    <div key={i} className={`p-4 rounded-2xl text-center transition-all hover:scale-105 ${badge.earned ? "badge-earned" : "badge-locked"}`}>
                       <div className="text-3xl mb-2">{badge.icon}</div>
                       <h4 className="text-sm font-bold">{badge.name}</h4>
                       <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{badge.description}</p>
@@ -445,7 +515,7 @@ export default function DashboardPage() {
                       <div className="font-bold">{career.breakdown?.average_quiz_score || 0}%</div>
                     </div>
                     <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
-                      <div style={{ color: "var(--text-secondary)" }}>Projects</div>
+                      <div style={{ color: "var(--text-secondary)" }}>Capstones</div>
                       <div className="font-bold">{career.breakdown?.projects_completed || 0}</div>
                     </div>
                     <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>

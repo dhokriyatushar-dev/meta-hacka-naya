@@ -18,13 +18,35 @@ router = APIRouter(prefix="/resources", tags=["resources"])
 logger = logging.getLogger(__name__)
 
 
+def _find_topic(topic_id: str):
+    """Find a topic by ID, with fuzzy matching for human-readable names."""
+    # 1. Exact match
+    if topic_id in TOPIC_GRAPH:
+        return TOPIC_GRAPH[topic_id]
+    # 2. Normalized match (lowercase, underscored)
+    normalized = topic_id.lower().replace(" ", "_").replace("-", "_")
+    if normalized in TOPIC_GRAPH:
+        return TOPIC_GRAPH[normalized]
+    # 3. Partial name/id match
+    for tid, topic in TOPIC_GRAPH.items():
+        if normalized in tid or tid in normalized:
+            return topic
+        if normalized.replace("_", " ") in topic.name.lower():
+            return topic
+    # 4. Keyword match (e.g. "python" matches "python_basics")
+    for tid, topic in TOPIC_GRAPH.items():
+        if normalized.replace("_", "") in tid.replace("_", ""):
+            return topic
+    return None
+
+
 @router.get("/{topic_id}", response_model=TopicPageResponse)
 async def get_topic_resources(topic_id: str, student_id: str = ""):
     """
     Get resources and AI summary for a topic.
     Returns ResourceCard list + AI-generated topic summary.
     """
-    topic = TOPIC_GRAPH.get(topic_id)
+    topic = _find_topic(topic_id)
     if not topic:
         raise HTTPException(status_code=404, detail=f"Topic '{topic_id}' not found")
 
