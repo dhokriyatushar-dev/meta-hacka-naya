@@ -35,7 +35,7 @@ export default function Home() {
         <div className="flex items-center gap-6">
           <a href="#features" className="text-sm hover:text-white transition-colors" style={{ color: "var(--text-secondary)" }}>Features</a>
           <a href="#how-it-works" className="text-sm hover:text-white transition-colors" style={{ color: "var(--text-secondary)" }}>How It Works</a>
-          <Link href="/onboarding" className="glow-btn text-sm !py-2 !px-6">
+          <Link href="/auth" className="glow-btn text-sm !py-2 !px-6">
             Get Started →
           </Link>
         </div>
@@ -61,7 +61,7 @@ export default function Home() {
           </p>
 
           <div className="flex gap-4 justify-center">
-            <Link href="/onboarding" className="glow-btn text-lg">
+            <Link href="/auth" className="glow-btn text-lg">
               Start Learning →
             </Link>
             <Link href="/dashboard" className="px-8 py-3 rounded-xl font-bold border transition-all hover:bg-opacity-10" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
@@ -125,7 +125,7 @@ export default function Home() {
             ))}
           </div>
 
-          <Link href="/onboarding" className="glow-btn inline-block mt-12 text-lg">
+          <Link href="/auth" className="glow-btn inline-block mt-12 text-lg">
             Begin Your Journey →
           </Link>
         </div>

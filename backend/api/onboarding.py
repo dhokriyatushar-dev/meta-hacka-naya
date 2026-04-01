@@ -45,6 +45,7 @@ class FullOnboardingRequest(BaseModel):
     job_description: Optional[str] = None
     weekly_hours: int = 10
     learning_goal: str = ""
+    user_id: Optional[str] = None  # Supabase auth user ID
 
 
 # ── Step 1: Resume/LinkedIn (Optional) ──
@@ -127,8 +128,13 @@ async def onboarding_step4(data: Step4Request):
 @router.post("/complete")
 async def full_onboarding(data: FullOnboardingRequest):
     """Complete onboarding in a single request."""
-    # Create student
-    student = student_manager.create(name=data.name, email=data.email)
+    # Use Supabase user_id if provided, otherwise generate
+    if data.user_id:
+        student = student_manager.get(data.user_id)
+        if not student:
+            student = student_manager.create(name=data.name, email=data.email, student_id=data.user_id)
+    else:
+        student = student_manager.create(name=data.name, email=data.email)
 
     # Parse resume if provided
     resume_skills = []

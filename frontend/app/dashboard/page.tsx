@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiGet, apiPost } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 type Tab = "roadmap" | "quizzes" | "badges" | "career";
 
@@ -20,6 +22,7 @@ interface StudentData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("roadmap");
   const [studentId, setStudentId] = useState<string>("");
   const [student, setStudent] = useState<StudentData | null>(null);
@@ -34,18 +37,31 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   // Project submission state
-  const [projectModal, setProjectModal] = useState<any>(null); // {title, description, type, requirements}
+  const [projectModal, setProjectModal] = useState<any>(null);
   const [projectSubmission, setProjectSubmission] = useState("");
   const [projectReport, setProjectReport] = useState<any>(null);
   const [submittingProject, setSubmittingProject] = useState(false);
 
   useEffect(() => {
-    const id = localStorage.getItem("edupath_student_id");
-    if (id) {
+    // Check Supabase auth first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/auth");
+        return;
+      }
+      const id = session.user.id;
       setStudentId(id);
+      localStorage.setItem("edupath_student_id", id);
       loadStudentData(id);
-    }
-  }, []);
+    });
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("edupath_student_id");
+    localStorage.removeItem("edupath_student_name");
+    router.push("/");
+  };
 
   const loadStudentData = async (id: string) => {
     try {
@@ -217,10 +233,13 @@ export default function DashboardPage() {
           </button>
         ))}
 
-        <div className="mt-auto">
+        <div className="mt-auto space-y-1">
           <Link href="/" className="sidebar-item flex items-center gap-3 text-sm">
             <span>🏠</span> Home
           </Link>
+          <button onClick={handleLogout} className="sidebar-item flex items-center gap-3 text-sm w-full text-left" style={{ color: "var(--accent-red)" }}>
+            <span>🚪</span> Logout
+          </button>
         </div>
       </aside>
 

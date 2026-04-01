@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiPost } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 const STEPS = [
   { num: 1, title: "Identity & Background", desc: "Upload resume or describe your background", icon: "📄" },
@@ -23,6 +24,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [userId, setUserId] = useState<string>("");
 
   // Form data
   const [name, setName] = useState("");
@@ -35,6 +37,19 @@ export default function OnboardingPage() {
   const [jobDescription, setJobDescription] = useState("");
   const [weeklyHours, setWeeklyHours] = useState(10);
   const [learningGoal, setLearningGoal] = useState("");
+
+  // Check auth on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/auth");
+        return;
+      }
+      setUserId(session.user.id);
+      setEmail(session.user.email || "");
+      setName(session.user.user_metadata?.full_name || "");
+    });
+  }, [router]);
 
   const addSkill = () => {
     if (skillInput && !skills.find(s => s.skill === skillInput)) {
@@ -57,8 +72,9 @@ export default function OnboardingPage() {
         target_field: targetField, skills,
         job_description: jobDescription || null,
         weekly_hours: weeklyHours, learning_goal: learningGoal,
+        user_id: userId,
       });
-      // Store student_id for dashboard
+      // Store student_id (now the Supabase user UUID)
       localStorage.setItem("edupath_student_id", result.student_id);
       localStorage.setItem("edupath_student_name", name);
       router.push("/dashboard");

@@ -38,19 +38,27 @@ class StudentManager:
                     pass
 
     def save(self, student: StudentProfile):
-        """Persist student profile to disk."""
+        """Persist student profile to disk AND sync to Supabase."""
         self.students[student.id] = student
         with open(self._filepath(student.id), "w") as f:
             json.dump(student.model_dump(), f, indent=2, default=str)
+
+        # Sync to Supabase (non-blocking, fails gracefully)
+        try:
+            from db.supabase_client import upsert_student
+            upsert_student(student.model_dump())
+        except Exception:
+            pass  # Supabase sync failure shouldn't break local operation
 
     def get(self, student_id: str) -> Optional[StudentProfile]:
         """Get student by ID."""
         return self.students.get(student_id)
 
-    def create(self, name: str = "", email: str = "") -> StudentProfile:
-        """Create a new student profile."""
+    def create(self, name: str = "", email: str = "", student_id: str = "") -> StudentProfile:
+        """Create a new student profile. Uses provided ID or generates one."""
+        sid = student_id or str(uuid.uuid4())[:8]
         student = StudentProfile(
-            id=str(uuid.uuid4())[:8],
+            id=sid,
             name=name,
             email=email,
         )
@@ -112,6 +120,13 @@ class StudentManager:
             self._check_badges(student)
             self._update_job_readiness(student)
             self.save(student)
+
+            # Sync quiz to Supabase
+            try:
+                from db.supabase_client import save_quiz_result
+                save_quiz_result(student_id, result.model_dump())
+            except Exception:
+                pass
         return student
 
     def complete_project(self, student_id: str, project_id: str) -> StudentProfile:

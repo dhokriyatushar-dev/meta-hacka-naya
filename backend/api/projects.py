@@ -80,6 +80,13 @@ async def submit_project(data: ProjectSubmission):
     with open(report_file, "w") as f:
         json.dump(report, f, indent=2)
 
+    # Sync to Supabase
+    try:
+        from db.supabase_client import save_project_report
+        save_project_report(report)
+    except Exception:
+        pass
+
     # Record completed project in student profile
     if evaluation.get("is_passing", False):
         student_manager.complete_project(data.student_id, project_id)
