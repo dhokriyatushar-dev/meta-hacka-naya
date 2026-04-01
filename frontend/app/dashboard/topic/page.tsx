@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { apiGet, apiPost } from "@/lib/api";
 import { SOURCE_CONFIG } from "@/lib/resourceUtils";
@@ -24,10 +25,10 @@ interface TopicData {
   quiz_unlocked: boolean;
 }
 
-export default function TopicPage() {
-  const params = useParams();
+function TopicContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const topicId = params.topicId as string;
+  const topicId = searchParams.get("id") as string;
   
   const [topicData, setTopicData] = useState<TopicData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -199,5 +200,17 @@ export default function TopicPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TopicPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen p-8 text-center" style={{ background: "var(--bg-primary)", color: "var(--text-secondary)" }}>
+        Loading Topic...
+      </div>
+    }>
+      <TopicContent />
+    </Suspense>
   );
 }

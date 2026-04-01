@@ -244,7 +244,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <Link href={`/dashboard/topic/${week.skillsCovered?.[0] || week.title.toLowerCase().replace(/ /g, '_')}`}
+                      <Link href={`/dashboard/topic?id=${week.skillsCovered?.[0] || week.title.toLowerCase().replace(/ /g, '_')}`}
                         className="text-xs px-3 py-1 rounded-lg font-bold" style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)" }}>
                         Study Topic →
                       </Link>
