@@ -5,3 +5,4 @@
 
 [build.environment]
   NEXT_PRIVATE_TARGET = "server"
+  NEXT_PUBLIC_API_URL = "https://REPLACE_ME_WITH_YOUR_HUGGING_FACE_URL.hf.space"
