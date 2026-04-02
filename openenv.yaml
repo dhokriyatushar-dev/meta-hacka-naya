@@ -78,7 +78,7 @@ inference:
 deployment:
   platform: "docker"
   dockerfile: "Dockerfile"
-  port: 8000
+  port: 7860
   env_vars:
     - API_BASE_URL
     - MODEL_NAME

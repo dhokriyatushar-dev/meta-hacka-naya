@@ -118,6 +118,12 @@ class EduPathEnv:
         if not student:
             return Reward(value=-0.1, reason="Unknown student")
 
+        # Loop detection — check BEFORE processing action
+        if len(self.action_history) >= 3:
+            last_3 = [a.type for a in self.action_history[-3:]]
+            if len(set(last_3)) == 1:
+                return Reward(value=-0.1, reason="Loop detected: same action 3+ times")
+
         # ── recommend_topic ──
         if action.type == ActionType.RECOMMEND_TOPIC:
             topic_id = action.topic_id
@@ -146,10 +152,11 @@ class EduPathEnv:
             if not topic_id or topic_id not in TOPIC_GRAPH:
                 return Reward(value=-0.1, reason="Invalid quiz topic")
 
-            # Simulate quiz outcome — students who studied a topic perform better
+            # Simulate quiz outcome — calculate ONCE and store for _execute_action
             skill_level = student_manager.get_skill_levels(self.student_id).get(topic_id, 0.3)
-            # Base 50 + skill bonus up to 40 + small variance
             simulated_score = min(100, max(0, int(50 + skill_level * 40 + random.uniform(-10, 15))))
+            # Store on action so _execute_action uses the same score
+            action._quiz_score = simulated_score
 
             if simulated_score >= 70:
                 return Reward(value=0.2, reason=f"Quiz passed (score: {simulated_score}%)")
@@ -197,12 +204,6 @@ class EduPathEnv:
             else:
                 return Reward(value=-0.2, reason=f"Not job-ready yet (score: {student.job_readiness_score})")
 
-        # Loop detection
-        if len(self.action_history) >= 3:
-            last_3 = [a.type for a in self.action_history[-3:]]
-            if len(set(last_3)) == 1:
-                return Reward(value=-0.1, reason="Loop detected: same action 3+ times")
-
         return Reward(value=0.0, reason="Unknown action")
 
     def _execute_action(self, action: Action) -> Dict:
@@ -228,9 +229,12 @@ class EduPathEnv:
                 info["topic"] = action.topic_id
 
         elif action.type == ActionType.ASSIGN_QUIZ and action.topic_id:
-            # Simulate quiz — use same formula as _calculate_reward
-            skill_level = student_manager.get_skill_levels(self.student_id).get(action.topic_id, 0.3)
-            score = min(100, max(0, int(50 + skill_level * 40 + random.uniform(-10, 15))))
+            # Use the score calculated in _calculate_reward (same step)
+            score = getattr(action, '_quiz_score', None)
+            if score is None:
+                # Fallback if called without _calculate_reward
+                skill_level = student_manager.get_skill_levels(self.student_id).get(action.topic_id, 0.3)
+                score = min(100, max(0, int(50 + skill_level * 40 + random.uniform(-10, 15))))
             result = QuizResult(
                 topic_id=action.topic_id,
                 score=score,

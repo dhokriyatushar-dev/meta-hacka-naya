@@ -11,6 +11,7 @@ COPY backend/ ./backend/
 COPY inference.py .
 COPY tasks/ ./tasks/
 COPY openenv.yaml .
+COPY README.md .
 
 # Set working directory for backend
 WORKDIR /app/backend
