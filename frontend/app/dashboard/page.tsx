@@ -68,7 +68,8 @@ export default function DashboardPage() {
       const data = await apiGet(`/api/onboarding/profile/${id}`);
       setStudent(data);
     } catch (err) {
-      console.error("Failed to load student data");
+      console.error("Failed to load student data, redirecting to onboarding");
+      router.push("/onboarding");
     }
   };
 
