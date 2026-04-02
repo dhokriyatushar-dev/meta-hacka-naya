@@ -128,45 +128,50 @@ async def onboarding_step4(data: Step4Request):
 @router.post("/complete")
 async def full_onboarding(data: FullOnboardingRequest):
     """Complete onboarding in a single request."""
-    # Use Supabase user_id if provided, otherwise generate
-    if data.user_id:
-        student = student_manager.get(data.user_id)
-        if not student:
-            student = student_manager.create(name=data.name, email=data.email, student_id=data.user_id)
-    else:
-        student = student_manager.create(name=data.name, email=data.email)
+    import traceback
+    try:
+        # Use Supabase user_id if provided, otherwise generate
+        if data.user_id:
+            student = student_manager.get(data.user_id)
+            if not student:
+                student = student_manager.create(name=data.name, email=data.email, student_id=data.user_id)
+        else:
+            student = student_manager.create(name=data.name, email=data.email)
 
-    # Parse resume if provided
-    resume_skills = []
-    if data.resume_text:
-        parsed = parse_resume(data.resume_text)
-        resume_skills = parsed.get("skills", [])
+        # Parse resume if provided
+        resume_skills = []
+        if data.resume_text:
+            parsed = parse_resume(data.resume_text)
+            resume_skills = parsed.get("skills", [])
 
-    # Parse JD if provided
-    jd_skills = []
-    if data.job_description:
-        jd_result = parse_job_description(data.job_description)
-        jd_skills = jd_result.get("required_skills", [])
+        # Parse JD if provided
+        jd_skills = []
+        if data.job_description:
+            jd_result = parse_job_description(data.job_description)
+            jd_skills = jd_result.get("required_skills", [])
 
-    # Update student
-    student_manager.update_from_onboarding(student.id, {
-        "name": data.name,
-        "email": data.email,
-        "resume_skills": resume_skills,
-        "target_field": data.target_field,
-        "skills": data.skills,
-        "job_description": data.job_description,
-        "jd_required_skills": jd_skills,
-        "weekly_hours": data.weekly_hours,
-        "learning_goal": data.learning_goal,
-    })
+        # Update student
+        student_manager.update_from_onboarding(student.id, {
+            "name": data.name,
+            "email": data.email,
+            "resume_skills": resume_skills,
+            "target_field": data.target_field,
+            "skills": data.skills,
+            "job_description": data.job_description,
+            "jd_required_skills": jd_skills,
+            "weekly_hours": data.weekly_hours,
+            "learning_goal": data.learning_goal,
+        })
 
-    return {
-        "message": "Onboarding complete!",
-        "student_id": student.id,
-        "resume_skills": resume_skills,
-        "jd_skills": jd_skills,
-    }
+        return {
+            "message": "Onboarding complete!",
+            "student_id": student.id,
+            "resume_skills": resume_skills,
+            "jd_skills": jd_skills,
+        }
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        raise HTTPException(status_code=400, detail=f"Backend Error: {str(e)}\n\nTrace: {error_trace}")
 
 
 # ── Get Student Profile ──
