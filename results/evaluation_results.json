@@ -1,0 +1,37 @@
+{
+  "scores": {
+    "rule_based": {
+      "task1_easy": 1.0,
+      "task2_medium": 0.9592,
+      "task3_hard": 0.8235
+    },
+    "react_enhanced": {
+      "task1_easy": 1.0,
+      "task2_medium": 0.9641,
+      "task3_hard": 0.8235
+    },
+    "ppo_trained": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.0,
+      "task3_hard": 0.0
+    }
+  },
+  "rewards": {
+    "rule_based": {
+      "task1_easy": 6.35,
+      "task2_medium": 11.35,
+      "task3_hard": 15.9
+    },
+    "react_enhanced": {
+      "task1_easy": 6.2,
+      "task2_medium": 11.51,
+      "task3_hard": 16.1
+    },
+    "ppo_trained": {
+      "task1_easy": -2.2,
+      "task2_medium": -4.2,
+      "task3_hard": -7.2
+    }
+  },
+  "num_episodes": 10
+}

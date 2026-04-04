@@ -9,9 +9,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY backend/ ./backend/
 COPY inference.py .
+COPY gym_wrapper.py .
+COPY train.py .
+COPY evaluate.py .
 COPY tasks/ ./tasks/
 COPY openenv.yaml .
 COPY README.md .
+# Copy trained models and results (create dirs if absent)
+RUN mkdir -p ./models ./results
 
 # Required env vars (set at runtime)
 ENV API_BASE_URL=""

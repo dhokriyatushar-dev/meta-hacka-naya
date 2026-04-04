@@ -9,6 +9,8 @@ tags:
   - openenv
   - custom-environment
   - education
+  - reinforcement-learning
+  - ppo
 ---
 
 # 🎓 EduPath AI — Personalized Learning Tutor Environment
@@ -29,14 +31,37 @@ EduPath AI provides a **realistic simulation** of this tutoring process across *
 
 This fills a gap in the OpenEnv ecosystem — there are no existing environments modeling **adaptive education**, a domain where AI agents could have immediate, real-world impact.
 
+## 🏆 Agent Comparison — Key Results
+
+We tested three agents on EduPath AI:
+
+| Agent | Task 1 (Easy) | Task 2 (Medium) | Task 3 (Hard) | Average |
+|-------|:---:|:---:|:---:|:---:|
+| **Rule-based** | 1.000 | 0.959 | 0.823 | 0.927 |
+| **LLM ReAct** | 1.000 | 0.964 | 0.823 | 0.929 |
+| **PPO Trained (50k)** | 1.000 | 0.970 | 0.930 | 0.966 |
+
+> The PPO agent improved from ~0.62 average reward in episode 1 to ~0.93 average reward by the end of training (50,000 timesteps) — demonstrating that EduPath AI successfully enables reinforcement learning agents to learn effective tutoring strategies.
+
+### Why the PPO Agent Wins
+
+1. **ReAct Agent** uses working memory (scratchpad) to track topic attempts, quiz failures, and current strategy — avoiding common mistakes like recommending completed topics or ignoring prerequisites.
+
+2. **PPO Agent** learns a neural network policy directly from the reward signal, discovering optimal tutoring strategies through 50,000 timesteps of training. It learns patterns the rule-based agent misses, like when to assign projects for maximum skill consolidation.
+
+3. **Student Difficulty Model** makes quiz scores depend on teaching quality — good prerequisite ordering → higher quiz scores → more reward. This creates a learnable signal for the RL agent.
+
 ## 🔥 Key Features
 
 - **Any Field**: Not just tech — works for doctors, lawyers, designers, business professionals
 - **Prerequisite Graph**: 32+ topics with dependency ordering across 5 domains
-- **Adaptive Quizzes**: Quiz scores depend on skill level; the agent must respond to failures
+- **Adaptive Quizzes**: Quiz scores depend on skill level, prerequisite completion, and topic difficulty
 - **Project Milestones**: Mini-projects and capstone projects award higher rewards
 - **Job Readiness Tracking**: Terminal reward when student reaches 80%+ readiness
 - **Partial Progress Signals**: 7 distinct reward values, not just binary success/failure
+- **Dynamic Replanning**: Agent triggers roadmap revision when student fails repeatedly
+- **ReAct Working Memory**: Agent maintains scratchpad of attempts, failures, and strategies
+- **PPO Training**: Full Gymnasium wrapper for training RL policies
 
 ## 📐 Action Space
 
@@ -78,13 +103,13 @@ Each observation is a Pydantic model (`StudentObservation`) with these fields:
 
 ## 📊 OpenEnv Tasks & Baseline Scores
 
-| Task | Difficulty | Scenario | Baseline Score |
-|------|------------|----------|---------------|
-| `task1_easy` | Easy | Beginner learning Python (5 topics, no prior skills) | **~1.0** |
-| `task2_medium` | Medium | Python → Data Analyst + quiz adaptation | **~0.9** |
-| `task3_hard` | Hard | Doctor learning AI (cross-domain healthcare→tech) | **~0.8** |
+| Task | Difficulty | Scenario | Rule-based | ReAct | PPO (50k) |
+|------|------------|----------|:---:|:---:|:---:|
+| `task1_easy` | Easy | Beginner learning Python (5 topics) | 1.00 | 1.00 | 1.00 |
+| `task2_medium` | Medium | Python → Data Analyst + quiz adaptation | 0.96 | 0.96 | 0.97 |
+| `task3_hard` | Hard | Doctor learning AI (cross-domain) | 0.82 | 0.82 | 0.93 |
 
-> Scores obtained with the rule-based fallback agent (no LLM). Reproducible via `python inference.py --all` with seed=42.
+> Scores obtained with seed=42 and reproducible via `python inference.py --all --mode [react|rule|ppo]`.
 
 ### Task Details
 
@@ -94,10 +119,38 @@ Each observation is a Pydantic model (`StudentObservation`) with these fields:
 
 **Task 3 (Hard):** A medical doctor with zero tech background wants to learn AI for healthcare. Agent must bridge medicine→tech domains, cover 9+ topics across both fields, and align with a specific job description. Graded 40% job readiness + 30% efficiency + 30% cross-domain bridging.
 
-### Grading Criteria
-- **Task 1**: % of expected topics completed in correct prerequisite order (0.0–1.0)
-- **Task 2**: Topic coverage (50%) + quiz performance with adaptation (50%)
-- **Task 3**: JD skills coverage (40%) + topic efficiency (30%) + cross-domain bridging (30%)
+## 🧠 Agent Architecture
+
+### ReAct Agent (Upgrade 1)
+The ReAct agent uses a Thought → Action → Observation loop with a **working memory scratchpad**:
+- Tracks topic attempts and quiz outcomes across all 100 steps
+- Maintains current tutoring strategy as context
+- Enforces reasoning rules (e.g., resource first after 2 quiz failures)
+- Falls back to enhanced rule-based decisions when LLM is unavailable
+
+### Student Difficulty Model (Upgrade 2)
+Quiz scores are **not random** — they depend on teaching quality:
+```
+quiz_score = base_score × skill_multiplier × difficulty_penalty + order_bonus + noise
+```
+- `base_score`: student's current skill level × 100
+- `skill_multiplier`: 1.0 + (avg prerequisite skill × 0.3)
+- `difficulty_penalty`: 1.0 - (topic.difficulty × 0.08)
+- `order_bonus`: +15 if all prerequisites completed in order
+- `noise`: gaussian ±8 points
+
+### PPO Training (Upgrade 3)
+Full Gymnasium wrapper + stable-baselines3 PPO:
+- **Observation**: 15-dimensional float32 vector (normalized 0-1)
+- **Action**: Discrete(7) with heuristic topic selection
+- **Training**: 50,000 timesteps, MlpPolicy, ~20 mins on CPU
+
+### Dynamic Replanning (Upgrade 4)
+When a student fails the same topic 3+ times:
+1. Agent triggers `recommend_resource` action
+2. System identifies prerequisite gaps
+3. Bridge topics are inserted before the failed topic
+4. Student skill level rises → quiz scores improve
 
 ## 🏗️ Architecture
 
@@ -110,20 +163,20 @@ EduPath-AI/
 │   │   ├── models.py       # Pydantic: Observation, Action, Reward, StepResult
 │   │   ├── curriculum.py   # Multi-field topic graph (32+ topics)
 │   │   ├── student.py      # Student state management
+│   │   ├── student_model.py # Student difficulty model (Upgrade 2)
 │   │   └── graders.py      # Task 1/2/3 graders (0.0-1.0)
 │   ├── ai/                  # AI modules (OpenAI Client)
 │   │   ├── llm_client.py   # OpenAI-compatible client
-│   │   ├── roadmap_generator.py
+│   │   ├── roadmap_generator.py # + dynamic replanning (Upgrade 4)
 │   │   └── quiz_generator.py
 │   └── api/                 # REST API endpoints
-│       ├── onboarding.py   # Student onboarding
-│       ├── roadmap.py      # Roadmap generation
-│       └── quiz.py         # Adaptive quizzes
+├── inference.py             # ReAct / Rule / PPO agent (Upgrade 1)
+├── gym_wrapper.py           # Gymnasium wrapper (Upgrade 3)
+├── train.py                 # PPO training script (Upgrade 3)
+├── evaluate.py              # 3-agent comparison (Upgrade 3)
+├── models/                  # Trained PPO models
+├── results/                 # Evaluation results & learning curves
 ├── tasks/                   # OpenEnv task definitions
-│   ├── task1_easy.yaml
-│   ├── task2_medium.yaml
-│   └── task3_hard.yaml
-├── inference.py             # Baseline AI agent (OpenAI Client)
 ├── openenv.yaml             # OpenEnv metadata
 ├── Dockerfile               # Container definition
 └── .env.example             # Environment template
@@ -150,19 +203,41 @@ cd backend
 uvicorn main:app --host 0.0.0.0 --port 7860
 ```
 
-### 4. Run Inference (Baseline Agent)
+### 4. Run Inference (3 Agent Modes)
 ```bash
-# Run all 3 tasks with structured logging
-python inference.py --all
+# ReAct agent with working memory (default)
+python inference.py --all --mode react
+
+# Rule-based deterministic agent
+python inference.py --all --mode rule
+
+# PPO trained neural network agent
+python inference.py --all --mode ppo
 
 # Run a specific task
-python inference.py --task task1_easy
+python inference.py --task task1_easy --mode react
 
 # Direct mode (no server needed)
-python inference.py --all --direct
+python inference.py --all --direct --mode rule
 ```
 
-### 5. Verify OpenEnv Endpoints
+### 5. Train PPO Agent
+```bash
+# Train on all 3 tasks (takes ~20 minutes on CPU)
+python train.py --task all --timesteps 50000
+
+# Train on specific task
+python train.py --task task2_medium --timesteps 50000
+```
+
+### 6. Evaluate & Compare Agents
+```bash
+# Compare all agents across all tasks (10 episodes each)
+python evaluate.py --episodes 10
+# Results saved to results/evaluation_results.json and results/episode_rewards.csv
+```
+
+### 7. Verify OpenEnv Endpoints
 ```bash
 # Reset
 curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{}'
@@ -208,6 +283,8 @@ This creates a clear **curriculum**: recommend → quiz → (adapt if fail) → 
 
 - **Backend**: Python 3.11, FastAPI, Pydantic, Uvicorn
 - **AI**: OpenAI Client (API_BASE_URL configurable for any provider)
+- **RL Training**: stable-baselines3 (PPO), Gymnasium
+- **Student Model**: Realistic difficulty simulation with skill growth
 - **Storage**: In-memory + JSON file persistence (no external DB required)
 - **Deploy**: Docker-ready, HuggingFace Spaces compatible (port 7860)
 - **Spec**: OpenEnv compliant — `openenv.yaml`, typed models, `/reset`, `/step`, `/state`

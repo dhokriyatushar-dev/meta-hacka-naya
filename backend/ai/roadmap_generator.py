@@ -293,3 +293,217 @@ def _generate_fallback_roadmap(field: str, weekly_hours: int, weeks: int) -> dic
             }
         ]
     }
+
+
+# ═══════════════════════════════════════════════════════════
+#  Dynamic Roadmap Replanning (Upgrade 4)
+# ═══════════════════════════════════════════════════════════
+
+def replan_roadmap(
+    student_profile: dict,
+    failed_topics: list,
+    reason: str = "repeated quiz failures",
+    current_roadmap: dict = None,
+) -> dict:
+    """
+    Replan the student's roadmap when they fail the same topic 3+ times.
+    
+    Inserts prerequisite bridge topics to address knowledge gaps.
+    Uses LLM if available, otherwise deterministic bridge insertion.
+    
+    Args:
+        student_profile: Current student data (target_field, completed_topics, etc.)
+        failed_topics: List of topic_ids the student has failed repeatedly
+        reason: Why replanning was triggered
+        current_roadmap: The current roadmap (optional, for LLM context)
+    
+    Returns:
+        Updated roadmap dict with bridge topics inserted
+    """
+    from environment.curriculum import TOPIC_GRAPH, get_topics_for_field
+
+    target_field = student_profile.get("target_field", "tech")
+    completed = student_profile.get("completed_topics", [])
+
+    # Identify prerequisite gaps for failed topics
+    bridge_topics = []
+    for failed_id in failed_topics:
+        topic = TOPIC_GRAPH.get(failed_id)
+        if not topic:
+            continue
+        for prereq_id in topic.prerequisites:
+            if prereq_id not in completed:
+                bridge_topics.append(prereq_id)
+            else:
+                prereq_topic = TOPIC_GRAPH.get(prereq_id)
+                if prereq_topic:
+                    for deep_prereq in prereq_topic.prerequisites:
+                        if deep_prereq not in completed:
+                            bridge_topics.append(deep_prereq)
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_bridges = []
+    for tid in bridge_topics:
+        if tid not in seen and tid not in completed:
+            seen.add(tid)
+            unique_bridges.append(tid)
+
+    # Try LLM-based replanning first
+    if is_api_key_set() and current_roadmap:
+        try:
+            return _llm_replan(
+                student_profile, failed_topics, unique_bridges,
+                reason, current_roadmap, target_field
+            )
+        except Exception as e:
+            logger.warning(f"LLM replanning failed: {e}, using deterministic fallback")
+
+    # Deterministic fallback
+    return _deterministic_replan(
+        student_profile, failed_topics, unique_bridges,
+        current_roadmap, target_field
+    )
+
+
+def _llm_replan(
+    student_profile: dict, failed_topics: list, bridge_topics: list,
+    reason: str, current_roadmap: dict, field: str
+) -> dict:
+    """Use LLM to intelligently replan the roadmap."""
+    from environment.curriculum import TOPIC_GRAPH
+
+    failed_names = [TOPIC_GRAPH[t].name for t in failed_topics if t in TOPIC_GRAPH]
+    bridge_names = [TOPIC_GRAPH[t].name for t in bridge_topics if t in TOPIC_GRAPH]
+
+    system_prompt = """You are a backend service that outputs ONLY valid JSON.
+You are replanning a student's learning roadmap because they have failed certain topics repeatedly.
+Your job is to insert prerequisite bridge topics BEFORE the failed topics in the roadmap.
+
+Output a JSON object with:
+{
+    "bridge_topics_to_add": [
+        {"topic_id": "string", "topic_name": "string", "reason": "string"}
+    ],
+    "revised_strategy": "string explaining the revised approach",
+    "expected_improvement": "string describing expected outcome"
+}"""
+
+    user_prompt = f"""Student field: {field}
+Failed topics: {', '.join(failed_names)}
+Suggested bridge topics: {', '.join(bridge_names)}
+Reason for replan: {reason}
+Currently completed: {len(student_profile.get('completed_topics', []))} topics
+
+Generate bridge topic recommendations to help the student overcome their failures."""
+
+    result = generate_json(system_prompt, user_prompt)
+
+    roadmap = dict(current_roadmap) if current_roadmap else {}
+    if result.get("bridge_topics_to_add"):
+        bridge_weeks = []
+        for i, bt in enumerate(result["bridge_topics_to_add"]):
+            tid = bt.get("topic_id", bridge_topics[i] if i < len(bridge_topics) else "")
+            topic = TOPIC_GRAPH.get(tid)
+            if topic:
+                bridge_weeks.append({
+                    "weekNumber": 0,
+                    "title": f"Bridge: {topic.name}",
+                    "learningObjectives": [f"Master prerequisites for {', '.join(failed_names)}"],
+                    "skillsCovered": [tid],
+                    "estimatedHours": topic.estimated_hours,
+                    "actionItems": [f"Study {topic.name}", "Complete practice exercises"],
+                    "resources": [{"title": r.title, "type": r.type.value, "url": r.url, "platform": r.platform} for r in topic.resources[:3]],
+                    "mini_project": None,
+                    "is_bridge": True,
+                    "reason": bt.get("reason", "Prerequisite gap identified"),
+                })
+
+        if bridge_weeks and "weeks" in roadmap:
+            insert_pos = 0
+            for i, week in enumerate(roadmap["weeks"]):
+                skills = week.get("skillsCovered", [])
+                if any(ft in skills for ft in failed_topics):
+                    insert_pos = i
+                    break
+                insert_pos = i + 1
+
+            roadmap["weeks"] = (
+                roadmap["weeks"][:insert_pos] +
+                bridge_weeks +
+                roadmap["weeks"][insert_pos:]
+            )
+            for i, week in enumerate(roadmap["weeks"]):
+                week["weekNumber"] = i + 1
+            roadmap["total_weeks"] = len(roadmap["weeks"])
+
+    roadmap["replan_info"] = {
+        "reason": reason,
+        "failed_topics": failed_topics,
+        "bridge_topics_added": [bt.get("topic_id") for bt in result.get("bridge_topics_to_add", [])],
+        "strategy": result.get("revised_strategy", "Bridge prerequisite gaps"),
+    }
+
+    return roadmap
+
+
+def _deterministic_replan(
+    student_profile: dict, failed_topics: list, bridge_topics: list,
+    current_roadmap: dict, field: str
+) -> dict:
+    """Deterministic fallback replanning — insert bridge topics."""
+    from environment.curriculum import TOPIC_GRAPH
+
+    roadmap = dict(current_roadmap) if current_roadmap else {
+        "domain": field,
+        "target_role": f"{field.title()} Professional",
+        "total_weeks": 0,
+        "weekly_hours": student_profile.get("weekly_hours", 10),
+        "weeks": [],
+        "capstone_projects": [],
+    }
+
+    bridge_weeks = []
+    for tid in bridge_topics:
+        topic = TOPIC_GRAPH.get(tid)
+        if not topic:
+            continue
+        bridge_weeks.append({
+            "weekNumber": 0,
+            "title": f"Bridge: {topic.name}",
+            "learningObjectives": [f"Build foundation for {', '.join(failed_topics)}"],
+            "skillsCovered": [tid],
+            "estimatedHours": topic.estimated_hours,
+            "actionItems": [f"Study {topic.name}", "Practice exercises"],
+            "resources": [{"title": r.title, "type": r.type.value, "url": r.url, "platform": r.platform} for r in topic.resources[:3]],
+            "mini_project": None,
+            "is_bridge": True,
+            "reason": f"Prerequisite for failing topic(s): {', '.join(failed_topics)}",
+        })
+
+    if bridge_weeks and "weeks" in roadmap:
+        insert_pos = 0
+        for i, week in enumerate(roadmap["weeks"]):
+            skills = week.get("skillsCovered", [])
+            if any(ft in skills for ft in failed_topics):
+                insert_pos = i
+                break
+            insert_pos = i + 1
+
+        roadmap["weeks"] = (
+            roadmap["weeks"][:insert_pos] +
+            bridge_weeks +
+            roadmap["weeks"][insert_pos:]
+        )
+        for i, week in enumerate(roadmap["weeks"]):
+            week["weekNumber"] = i + 1
+        roadmap["total_weeks"] = len(roadmap["weeks"])
+
+    roadmap["replan_info"] = {
+        "reason": "repeated quiz failures",
+        "failed_topics": failed_topics,
+        "bridge_topics_added": bridge_topics,
+        "strategy": "Insert prerequisite bridge topics before failed topics",
+    }
+
+    return roadmap

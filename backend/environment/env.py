@@ -13,6 +13,7 @@ from environment.curriculum import (
     get_projects_for_field
 )
 from environment.student import student_manager
+from environment.student_model import StudentDifficultyModel
 
 
 class EduPathEnv:
@@ -31,6 +32,8 @@ class EduPathEnv:
         self.max_steps = 100
         # Dedicated RNG for reproducible quiz outcomes
         self._rng = random.Random(seed)
+        # Student difficulty model for realistic quiz simulation
+        self.difficulty_model = StudentDifficultyModel(seed=seed)
 
     def reset(self, student_id: Optional[str] = None, seed: int = 42) -> Observation:
         """Reset the environment. Returns initial observation."""
@@ -45,6 +48,16 @@ class EduPathEnv:
         self.action_history = []
         self.done = False
         self._rng = random.Random(seed)  # Reset RNG for reproducibility
+        self.difficulty_model.reset(seed=seed)
+
+        # Initialize difficulty model from student profile
+        if self.student_id:
+            student = student_manager.get(self.student_id)
+            if student:
+                self.difficulty_model.initialize_from_profile(
+                    student.self_assessed_skills,
+                    student.resume_skills
+                )
 
         return self._get_observation()
 
@@ -155,9 +168,10 @@ class EduPathEnv:
             if not topic_id or topic_id not in TOPIC_GRAPH:
                 return Reward(value=-0.1, reason="Invalid quiz topic")
 
-            # Simulate quiz outcome — calculate ONCE and store for _execute_action
-            skill_level = student_manager.get_skill_levels(self.student_id).get(topic_id, 0.3)
-            simulated_score = min(100, max(0, int(50 + skill_level * 40 + self._rng.uniform(-10, 15))))
+            # Use StudentDifficultyModel for realistic quiz simulation
+            simulated_score = self.difficulty_model.simulate_quiz_score(
+                topic_id, student.completed_topics
+            )
             # Store on action so _execute_action uses the same score
             action._quiz_score = simulated_score
 
@@ -229,15 +243,20 @@ class EduPathEnv:
                         SkillLevel(skill=action.topic_id, level="Studied", proficiency=0.5)
                     )
                 student_manager.save(student)
+                # Update difficulty model when topic is studied
+                self.difficulty_model.update_skill_after_topic_study(action.topic_id)
                 info["topic"] = action.topic_id
 
         elif action.type == ActionType.ASSIGN_QUIZ and action.topic_id:
             # Use the score calculated in _calculate_reward (same step)
             score = getattr(action, '_quiz_score', None)
             if score is None:
-                # Fallback if called without _calculate_reward
-                skill_level = student_manager.get_skill_levels(self.student_id).get(action.topic_id, 0.3)
-                score = min(100, max(0, int(50 + skill_level * 40 + self._rng.uniform(-10, 15))))
+                # Fallback: use difficulty model
+                student = student_manager.get(self.student_id)
+                score = self.difficulty_model.simulate_quiz_score(
+                    action.topic_id,
+                    student.completed_topics if student else []
+                )
             result = QuizResult(
                 topic_id=action.topic_id,
                 score=score,
@@ -247,12 +266,26 @@ class EduPathEnv:
                 difficulty=action.difficulty or QuizDifficulty.MEDIUM,
             )
             student_manager.record_quiz(self.student_id, result)
+            # Update difficulty model skill after quiz
+            self.difficulty_model.update_skill_after_quiz(action.topic_id, score >= 70)
             info["quiz_score"] = score
             info["passed"] = score >= 70
 
         elif action.type in (ActionType.ASSIGN_MINI_PROJECT, ActionType.ASSIGN_CAPSTONE):
             if action.project_id:
                 student_manager.complete_project(self.student_id, action.project_id)
+                # Update difficulty model for project completion
+                project = PROJECT_DB.get(action.project_id)
+                if project:
+                    if action.type == ActionType.ASSIGN_CAPSTONE:
+                        student = student_manager.get(self.student_id)
+                        self.difficulty_model.update_skill_after_capstone(
+                            student.target_field if student else "tech"
+                        )
+                    else:
+                        self.difficulty_model.update_skill_after_project(
+                            project.skills_tested
+                        )
                 info["project"] = action.project_id
 
         elif action.type == ActionType.MARK_JOB_READY:

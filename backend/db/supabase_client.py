@@ -11,12 +11,13 @@ from typing import Optional, Dict, Any
 logger = logging.getLogger(__name__)
 
 _supabase_client = None
+_supabase_checked = False
 
 
 def _get_client():
-    """Get Supabase client (lazy init)."""
-    global _supabase_client
-    if _supabase_client is not None:
+    """Get Supabase client (lazy init). Caches result to avoid repeated warnings."""
+    global _supabase_client, _supabase_checked
+    if _supabase_checked:
         return _supabase_client
 
     url = os.getenv("SUPABASE_URL", "")
@@ -24,15 +25,18 @@ def _get_client():
 
     if not url or not key:
         logger.warning("SUPABASE_URL or SUPABASE_KEY not set. Database sync disabled.")
+        _supabase_checked = True
         return None
 
     try:
         from supabase import create_client
         _supabase_client = create_client(url, key)
         logger.info("Supabase client initialized successfully.")
+        _supabase_checked = True
         return _supabase_client
     except Exception as e:
         logger.error(f"Failed to initialize Supabase client: {e}")
+        _supabase_checked = True
         return None
 
 
