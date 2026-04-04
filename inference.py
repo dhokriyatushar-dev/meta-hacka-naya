@@ -26,9 +26,10 @@ random.seed(SEED)
 
 # ── Environment configuration ──
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:7860")
-API_BASE_URL = os.getenv("API_BASE_URL", "")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -74,7 +75,7 @@ def _get_openai_client():
 
     client = OpenAI(
         base_url=API_BASE_URL,
-        api_key=HF_TOKEN or os.getenv("OPENAI_API_KEY", "sk-placeholder"),
+        api_key=HF_TOKEN or os.getenv("API_KEY"),
     )
     return client, MODEL_NAME
 
