@@ -217,6 +217,17 @@ class EnvHTTPClient:
         resp.raise_for_status()
         return resp.json()
 
+    def grade(self, task_id: str) -> float:
+        """POST /grade → returns score for the task."""
+        resp = requests.post(
+            f"{self.base_url}/grade",
+            json={"task_id": task_id},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("score", 0.0)
+
 
 # ═══════════════════════════════════════════════════════════
 #  Direct Mode — Import env class directly (fallback)
@@ -234,6 +245,7 @@ class EnvDirectClient:
         self.ActionType = ActionType
         self.student_manager = student_manager
         self.env = None
+        self._current_student_id = None
 
     def reset(self, student_profile: dict = None, seed: int = 42) -> dict:
         random.seed(seed)
@@ -252,6 +264,7 @@ class EnvDirectClient:
             })
             student_id = student.id
 
+        self._current_student_id = student_id
         obs = self.env.reset(student_id)
         return {
             "observation": obs.model_dump(),
@@ -283,6 +296,20 @@ class EnvDirectClient:
 
     def state(self) -> dict:
         return self.env.state() if self.env else {}
+
+    def grade(self, task_id: str) -> float:
+        """Grade using direct grader import."""
+        from environment.graders import grade_task1, grade_task2, grade_task3
+        student = self.student_manager.get(self._current_student_id)
+        if not student:
+            return 0.0
+        graders = {
+            "task1_easy": grade_task1,
+            "task2_medium": grade_task2,
+            "task3_hard": grade_task3,
+        }
+        grader = graders.get(task_id)
+        return grader(student) if grader else 0.0
 
 
 def get_client(use_http: bool = True) -> object:
@@ -384,42 +411,13 @@ def run_task(task_id: str, client) -> float:
         if done:
             break
 
-    # Grade the task
-    score = grade_task(task_id, client)
+    # Grade the task via /grade endpoint (works both HTTP and direct)
+    score = client.grade(task_id)
 
     # Emit [END]
     log_end(task_id, step_count, total_reward, score)
 
     return score
-
-
-def grade_task(task_id: str, client) -> float:
-    """Grade the current task using graders."""
-    # Try to get the final student state and grade
-    try:
-        state = client.state()
-        student_id = state.get("student_id", "")
-
-        # Import graders
-        from environment.graders import grade_task1, grade_task2, grade_task3
-        from environment.student import student_manager
-
-        student = student_manager.get(student_id)
-        if not student:
-            return 0.0
-
-        graders = {
-            "task1_easy": grade_task1,
-            "task2_medium": grade_task2,
-            "task3_hard": grade_task3,
-        }
-        grader = graders.get(task_id)
-        if grader:
-            return grader(student)
-    except Exception as e:
-        logger.warning(f"Grading failed: {e}")
-
-    return 0.0
 
 
 # ═══════════════════════════════════════════════════════════

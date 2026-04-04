@@ -1,4 +1,5 @@
 # EduPath AI — OpenEnv Specification
+spec_version: 1
 name: edupath-ai
 version: "1.0.0"
 description: >

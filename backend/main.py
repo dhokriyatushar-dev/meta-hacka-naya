@@ -21,6 +21,7 @@ from environment.curriculum import TOPIC_GRAPH, PROJECT_DB
 from environment.env import EduPathEnv
 from environment.models import Action, ActionType, QuizDifficulty
 from environment.student import student_manager
+from environment.graders import grade_task1, grade_task2, grade_task3
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +80,12 @@ class StateRequest(BaseModel):
     session_id: Optional[str] = None
 
 
+class GradeRequest(BaseModel):
+    """Request body for /grade endpoint."""
+    task_id: str
+    session_id: Optional[str] = None
+
+
 # ═══ OpenEnv Core Endpoints (REQUIRED by spec) ═══
 
 @app.post("/reset")
@@ -95,6 +102,13 @@ async def env_reset(request: ResetRequest = None):
         random.seed(request.seed)
 
     session_id = DEFAULT_SESSION
+
+    # Clean up previous session's student data to prevent accumulation
+    old_env = env_sessions.get(session_id)
+    if old_env and old_env.student_id:
+        # Remove old student from in-memory store (keeps disk clean)
+        student_manager.students.pop(old_env.student_id, None)
+
     env = EduPathEnv()
     env_sessions[session_id] = env
 
@@ -183,6 +197,40 @@ async def env_state(request: StateRequest = None):
             "state": None,
         }
     return env.state()
+
+
+@app.post("/grade")
+async def env_grade(request: GradeRequest):
+    """
+    Grade the current session for a specific task.
+    Returns a score between 0.0 and 1.0.
+    """
+    session_id = request.session_id or DEFAULT_SESSION
+    env = env_sessions.get(session_id)
+    if not env:
+        return {"error": "No active session. Call /reset first.", "score": 0.0}
+
+    student = student_manager.get(env.student_id)
+    if not student:
+        return {"error": "Student not found.", "score": 0.0}
+
+    graders = {
+        "task1_easy": grade_task1,
+        "task2_medium": grade_task2,
+        "task3_hard": grade_task3,
+    }
+    grader = graders.get(request.task_id)
+    if not grader:
+        return {"error": f"Unknown task: {request.task_id}", "score": 0.0}
+
+    score = grader(student)
+    return {
+        "task_id": request.task_id,
+        "score": round(score, 4),
+        "student_id": env.student_id,
+        "completed_topics": student.completed_topics,
+        "job_readiness_score": student.job_readiness_score,
+    }
 
 
 # ═══ Existing API Endpoints ═══

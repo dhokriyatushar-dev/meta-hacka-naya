@@ -23,14 +23,16 @@ class EduPathEnv:
     The environment responds with new state + reward signal.
     """
 
-    def __init__(self, student_id: Optional[str] = None):
+    def __init__(self, student_id: Optional[str] = None, seed: int = 42):
         self.student_id = student_id
         self.total_steps = 0
         self.action_history: List[Action] = []
         self.done = False
         self.max_steps = 100
+        # Dedicated RNG for reproducible quiz outcomes
+        self._rng = random.Random(seed)
 
-    def reset(self, student_id: Optional[str] = None) -> Observation:
+    def reset(self, student_id: Optional[str] = None, seed: int = 42) -> Observation:
         """Reset the environment. Returns initial observation."""
         if student_id:
             self.student_id = student_id
@@ -42,6 +44,7 @@ class EduPathEnv:
         self.total_steps = 0
         self.action_history = []
         self.done = False
+        self._rng = random.Random(seed)  # Reset RNG for reproducibility
 
         return self._get_observation()
 
@@ -154,7 +157,7 @@ class EduPathEnv:
 
             # Simulate quiz outcome — calculate ONCE and store for _execute_action
             skill_level = student_manager.get_skill_levels(self.student_id).get(topic_id, 0.3)
-            simulated_score = min(100, max(0, int(50 + skill_level * 40 + random.uniform(-10, 15))))
+            simulated_score = min(100, max(0, int(50 + skill_level * 40 + self._rng.uniform(-10, 15))))
             # Store on action so _execute_action uses the same score
             action._quiz_score = simulated_score
 
@@ -234,7 +237,7 @@ class EduPathEnv:
             if score is None:
                 # Fallback if called without _calculate_reward
                 skill_level = student_manager.get_skill_levels(self.student_id).get(action.topic_id, 0.3)
-                score = min(100, max(0, int(50 + skill_level * 40 + random.uniform(-10, 15))))
+                score = min(100, max(0, int(50 + skill_level * 40 + self._rng.uniform(-10, 15))))
             result = QuizResult(
                 topic_id=action.topic_id,
                 score=score,

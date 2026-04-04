@@ -140,32 +140,131 @@ class StudentManager:
         return student
 
     def _check_badges(self, student: StudentProfile):
-        """Check and award badges based on current progress."""
+        """Check and award badges based on current progress — synced with full 30-badge catalog."""
         earned_ids = {b.id for b in student.badges}
 
-        # Topic completion badges
-        topic_milestones = {5: "Explorer", 10: "Scholar", 15: "Expert"}
-        for count, name in topic_milestones.items():
-            badge_id = f"topics_{count}"
+        # ── Topic completion badges (7 badges) ──
+        topic_milestones = {
+            1: ("first_step", "Baby's First Step 👶", "Complete your very first topic"),
+            3: ("topics_3", "Curious Cat 🐱", "Complete 3 topics"),
+            5: ("topics_5", "Knowledge Goblin 👹", "Complete 5 topics"),
+            7: ("topics_7", "Lucky Learner 🍀", "Complete 7 topics"),
+            10: ("topics_10", "Brain Goes Brrr 🧊", "Complete 10 topics"),
+            15: ("topics_15", "Sigma Scholar 💀", "Complete 15 topics"),
+            20: ("topics_20", "Galaxy Brain 🌌", "Complete 20 topics"),
+        }
+        for count, (badge_id, name, desc) in topic_milestones.items():
             if len(student.completed_topics) >= count and badge_id not in earned_ids:
                 student.badges.append(Badge(
-                    id=badge_id, name=f"{name} Badge",
-                    description=f"Completed {count} topics",
+                    id=badge_id, name=name,
+                    description=desc,
                     type=BadgeType.TOPIC_COMPLETION, icon="📚"
                 ))
 
-        # Quiz streak badges
-        streak_milestones = {3: "Hat Trick", 5: "On Fire", 10: "Unstoppable"}
-        for count, name in streak_milestones.items():
-            badge_id = f"streak_{count}"
+        # ── Quiz pass badges (3 badges) ──
+        quizzes_passed = len([q for q in student.quiz_history if q.score >= 70])
+        quiz_milestones = {
+            1: ("first_quiz", "Quiz Rookie 📋", "Pass your first quiz"),
+            5: ("quiz_5", "Quiz Snacker 🍿", "Pass 5 quizzes"),
+            10: ("quiz_10", "Quiz Terminator 🤖", "Pass 10 quizzes"),
+        }
+        for count, (badge_id, name, desc) in quiz_milestones.items():
+            if quizzes_passed >= count and badge_id not in earned_ids:
+                student.badges.append(Badge(
+                    id=badge_id, name=name,
+                    description=desc,
+                    type=BadgeType.QUIZ_STREAK, icon="📋"
+                ))
+
+        # ── Perfect score badge ──
+        if any(q.score >= 100 for q in student.quiz_history) and "perfect_score" not in earned_ids:
+            student.badges.append(Badge(
+                id="perfect_score", name="100% Flex 💯",
+                description="Score 100% on any quiz",
+                type=BadgeType.QUIZ_STREAK, icon="💯"
+            ))
+
+        # ── Quiz streak badges (4 badges) ──
+        streak_milestones = {
+            3: ("streak_3", "Hat Trick Hero 🎩", "Pass 3 quizzes in a row"),
+            5: ("streak_5", "On Fire 🔥", "Pass 5 quizzes in a row"),
+            7: ("streak_7", "Unstoppable Force 🏋️", "Pass 7 quizzes in a row"),
+            10: ("streak_10", "Legendary Mode 🐉", "Pass 10 quizzes in a row"),
+        }
+        for count, (badge_id, name, desc) in streak_milestones.items():
             if student.quiz_streak >= count and badge_id not in earned_ids:
                 student.badges.append(Badge(
-                    id=badge_id, name=f"{name} Streak",
-                    description=f"Passed {count} quizzes in a row",
+                    id=badge_id, name=name,
+                    description=desc,
                     type=BadgeType.QUIZ_STREAK, icon="🔥"
                 ))
 
-        # Project badges
+        # ── Resource badges ──
+        total_clicks = sum(len(v) for v in student.clicked_resource_links.values()) if student.clicked_resource_links else 0
+        if total_clicks >= 10 and "resource_hunter" not in earned_ids:
+            student.badges.append(Badge(
+                id="resource_hunter", name="Resource Hunter 🔍",
+                description="Click 10+ learning resources",
+                type=BadgeType.MILESTONE, icon="🔍"
+            ))
+        if total_clicks >= 25 and "resource_hoarder" not in earned_ids:
+            student.badges.append(Badge(
+                id="resource_hoarder", name="Resource Hoarder 📦",
+                description="Click 25+ learning resources",
+                type=BadgeType.MILESTONE, icon="📦"
+            ))
+
+        # ── Comeback kid badge ──
+        topics_quizzed = {}
+        for q in student.quiz_history:
+            if q.topic_id not in topics_quizzed:
+                topics_quizzed[q.topic_id] = []
+            topics_quizzed[q.topic_id].append(q)
+        for topic_id, quizzes in topics_quizzed.items():
+            if len(quizzes) >= 2 and not quizzes[0].passed and quizzes[-1].passed and "comeback_kid" not in earned_ids:
+                student.badges.append(Badge(
+                    id="comeback_kid", name="Comeback Kid 💪",
+                    description="Pass a quiz after failing it once",
+                    type=BadgeType.MILESTONE, icon="💪"
+                ))
+                break
+
+        # ── Cross-domain badge ──
+        if "cross_domain" not in earned_ids:
+            from environment.curriculum import TOPIC_GRAPH
+            fields = set()
+            for t in student.completed_topics:
+                topic = TOPIC_GRAPH.get(t)
+                if topic:
+                    fields.add(topic.field)
+            if len(fields) >= 2:
+                student.badges.append(Badge(
+                    id="cross_domain", name="Renaissance Human 🎨",
+                    description="Complete topics from 2+ different fields",
+                    type=BadgeType.MILESTONE, icon="🎨"
+                ))
+
+        # ── Project badges (2 badges) ──
+        capstone_count = 0
+        for pid in student.completed_projects:
+            from environment.curriculum import PROJECT_DB
+            proj = PROJECT_DB.get(pid)
+            if proj and proj.is_capstone:
+                capstone_count += 1
+        if capstone_count >= 1 and "capstone_1" not in earned_ids:
+            student.badges.append(Badge(
+                id="capstone_1", name="Mini Boss Defeated 🎮",
+                description="Complete your first capstone project",
+                type=BadgeType.PROJECT_SUCCESS, icon="🎮"
+            ))
+        if capstone_count >= 2 and "capstone_2" not in earned_ids:
+            student.badges.append(Badge(
+                id="capstone_2", name="Final Boss Mode 👑",
+                description="Complete both capstone projects",
+                type=BadgeType.PROJECT_SUCCESS, icon="👑"
+            ))
+
+        # ── General project badges ──
         project_milestones = {1: "Builder", 3: "Creator", 5: "Architect"}
         for count, name in project_milestones.items():
             badge_id = f"projects_{count}"
@@ -176,13 +275,33 @@ class StudentManager:
                     type=BadgeType.PROJECT_SUCCESS, icon="🛠️"
                 ))
 
-        # Job ready badge
-        if student.job_readiness_score >= 0.8 and "job_ready" not in earned_ids:
-            student.badges.append(Badge(
-                id="job_ready", name="Job Ready!",
-                description="Achieved 80%+ job readiness score",
-                type=BadgeType.JOB_READY, icon="💼"
-            ))
+        # ── Job readiness badges (4 badges) ──
+        readiness_milestones = {
+            0.5: ("job_50", "Getting There 🚗", "Reach 50% job readiness"),
+            0.7: ("job_70", "Almost Ready 🚀", "Reach 70% job readiness"),
+            0.8: ("job_80", "Job Ready! 💼", "Reach 80% job readiness"),
+            0.95: ("job_95", "Overqualified 🏆", "Reach 95% job readiness"),
+        }
+        for threshold, (badge_id, name, desc) in readiness_milestones.items():
+            if student.job_readiness_score >= threshold and badge_id not in earned_ids:
+                student.badges.append(Badge(
+                    id=badge_id, name=name,
+                    description=desc,
+                    type=BadgeType.JOB_READY, icon="💼"
+                ))
+
+        # ── Completionist badge ──
+        if "completionist" not in earned_ids:
+            from environment.curriculum import get_topics_for_field
+            if student.target_field:
+                field_topics = get_topics_for_field(student.target_field)
+                field_topic_ids = {t.id for t in field_topics}
+                if field_topic_ids and field_topic_ids.issubset(set(student.completed_topics)):
+                    student.badges.append(Badge(
+                        id="completionist", name="The Completionist 🎯",
+                        description="Complete ALL available topics in your field",
+                        type=BadgeType.MILESTONE, icon="🎯"
+                    ))
 
     def _update_job_readiness(self, student: StudentProfile):
         """Calculate job readiness score based on progress."""

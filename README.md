@@ -1,3 +1,16 @@
+---
+title: EduPath AI
+emoji: 🎓
+colorFrom: gray
+colorTo: pink
+sdk: docker
+pinned: false
+tags:
+  - openenv
+  - custom-environment
+  - education
+---
+
 # 🎓 EduPath AI — Personalized Learning Tutor Environment
 
 > OpenEnv-compliant reinforcement learning environment for training AI agents to be effective personalized tutors.
