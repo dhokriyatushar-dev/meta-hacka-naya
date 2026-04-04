@@ -154,7 +154,7 @@ class StudentManager:
             20: ("topics_20", "Galaxy Brain 🌌", "Complete 20 topics"),
         }
         for count, (badge_id, name, desc) in topic_milestones.items():
-            if len(student.completed_topics) >= count and badge_id not in earned_ids:
+            if len(student.topics_studied) >= count and badge_id not in earned_ids:
                 student.badges.append(Badge(
                     id=badge_id, name=name,
                     description=desc,

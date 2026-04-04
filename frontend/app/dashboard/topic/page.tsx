@@ -85,9 +85,8 @@ function TopicContent() {
       });
       
       if (data.quiz_unlocked) {
-        // Navigate back to dashboard where they can take the quiz
-        // Optional: Could pass a query param or state to open the quiz tab
-        router.push('/dashboard');
+        // Update local state to show 'Completed ✓' button instead of instantly redirecting
+        setTopicData(prev => prev ? { ...prev, quiz_unlocked: true } : prev);
       }
     } catch (err: any) {
       alert(err.message || "Failed to mark complete. Did you click a resource link first?");
@@ -210,21 +209,28 @@ function TopicContent() {
           <p className="text-xs opacity-70">Mark this topic as complete to unlock the quiz on your dashboard.</p>
         </div>
         
-        {topicData.quiz_unlocked ? (
-          <Link href="/dashboard" className="glow-btn !text-sm whitespace-nowrap">
-            Take Quiz →
-          </Link>
-        ) : (
-          <button 
-            onClick={handleMarkComplete}
-            disabled={!canMarkComplete || markingComplete}
-            className={`px-6 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
-              canMarkComplete && !markingComplete ? 'glow-btn' : 'opacity-40 cursor-not-allowed bg-gray-800'
-            }`}
-          >
-            {markingComplete ? "Marking..." : "Mark as Complete ✓"}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {topicData.quiz_unlocked ? (
+            <>
+              <button disabled className="px-6 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all bg-green-900 text-green-300 opacity-80 cursor-not-allowed border border-green-500">
+                Completed ✓
+              </button>
+              <Link href="/dashboard" className="px-6 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all" style={{ background: "transparent", color: "var(--accent-blue)", border: "1px solid var(--accent-blue)" }}>
+                Take Quiz →
+              </Link>
+            </>
+          ) : (
+            <button 
+              onClick={handleMarkComplete}
+              disabled={!canMarkComplete || markingComplete}
+              className={`px-6 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
+                canMarkComplete && !markingComplete ? 'glow-btn' : 'opacity-40 cursor-not-allowed bg-gray-800'
+              }`}
+            >
+              {markingComplete ? "Marking..." : "Mark as Complete ✓"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
