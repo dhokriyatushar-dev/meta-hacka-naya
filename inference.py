@@ -35,42 +35,30 @@ HF_TOKEN = os.getenv("HF_TOKEN", "")
 #  Structured Logging — [START], [STEP], [END]
 # ═══════════════════════════════════════════════════════════
 
-def log_start(task_id: str, student_id: str, model: str):
+def log_start(task: str, env: str, model: str) -> None:
     """Emit [START] structured log to stdout."""
-    entry = {
-        "task_id": task_id,
-        "student_id": student_id,
-        "model": model,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "api_base_url": API_BASE_URL or "rule-based",
-    }
-    print(f"[START] {json.dumps(entry)}", flush=True)
+    print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
-def log_step(step: int, action: str, topic_id: str, reward: float, done: bool, info: dict = None):
+from typing import List, Optional
+
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str] = None) -> None:
     """Emit [STEP] structured log to stdout."""
-    entry = {
-        "step": step,
-        "action": action,
-        "topic_id": topic_id or "",
-        "reward": round(reward, 4),
-        "done": done,
-    }
-    if info:
-        entry["info"] = info
-    print(f"[STEP] {json.dumps(entry)}", flush=True)
+    error_val = error if error else "null"
+    done_val = str(done).lower()
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        flush=True,
+    )
 
 
-def log_end(task_id: str, total_steps: int, total_reward: float, score: float):
+from typing import List, Optional
+
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     """Emit [END] structured log to stdout."""
-    entry = {
-        "task_id": task_id,
-        "total_steps": total_steps,
-        "total_reward": round(total_reward, 4),
-        "score": round(score, 4),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    print(f"[END] {json.dumps(entry)}", flush=True)
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    success_val = str(success).lower()
+    print(f"[END] success={success_val} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -378,9 +366,9 @@ def run_task(task_id: str, client) -> float:
     student_id = reset_result.get("info", {}).get("student_id", "unknown")
 
     # Emit [START]
-    log_start(task_id, student_id, MODEL_NAME)
+    log_start(task=task_id, env="edupath-ai", model=MODEL_NAME)
 
-    total_reward = 0.0
+    rewards_list: List[float] = []
     step_count = 0
 
     for step in range(max_steps):
@@ -393,17 +381,19 @@ def run_task(task_id: str, client) -> float:
 
         reward_val = result.get("reward", {}).get("value", 0.0)
         done = result.get("done", False)
-        info = result.get("info", {})
-        total_reward += reward_val
+        
+        rewards_list.append(reward_val)
+
+        # Build action string representation for logs
+        action_str = f"{action.get('type')}('{action.get('topic_id', '')}')"
 
         # Emit [STEP]
         log_step(
             step=step_count,
-            action=action.get("type", "unknown"),
-            topic_id=action.get("topic_id", ""),
+            action=action_str,
             reward=reward_val,
             done=done,
-            info=info,
+            error=None
         )
 
         observation = result.get("observation", observation)
@@ -413,9 +403,10 @@ def run_task(task_id: str, client) -> float:
 
     # Grade the task via /grade endpoint (works both HTTP and direct)
     score = client.grade(task_id)
+    success = score >= 0.8  # Threshold
 
     # Emit [END]
-    log_end(task_id, step_count, total_reward, score)
+    log_end(success=success, steps=step_count, score=score, rewards=rewards_list)
 
     return score
 
