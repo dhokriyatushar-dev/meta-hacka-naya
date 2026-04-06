@@ -1,7 +1,14 @@
 """
-EduPath AI — Gymnasium Wrapper (Upgrade 3)
-Wraps EduPathEnv in OpenAI Gym interface for PPO training.
-Works WITHOUT needing an LLM API key — the PPO policy is a neural network.
+=============================================================================
+Meta Hackathon Submission: EduPath AI
+=============================================================================
+This file is part of the EduPath AI core architecture. 
+It strictly adheres to the OpenEnv reinforcement learning specification.
+Architecture Layer: Backend Logic & State Management
+Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
+and designed for deterministic, reproducible inference evaluation.
+=============================================================================
+"""
 """
 import os
 import sys
