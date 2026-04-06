@@ -1,0 +1,10 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NEXT_PRIVATE_TARGET = "server"
+  NEXT_PUBLIC_API_URL = "https://degree-checker-01-dupath-ai-backend.hf.space"
+  NEXT_PUBLIC_SUPABASE_URL = "https://huhjrgjcmbwbjouvwusa.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_yku8_ypMWukKtJcRz19-yQ_pClSQ9jD"

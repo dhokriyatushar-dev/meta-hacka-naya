@@ -1,0 +1,91 @@
+{
+  "scores": {
+    "rule_based": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.2088,
+      "task3_hard": 0.0,
+      "task4_team": 0.4017,
+      "task5_deadline": 0.025
+    },
+    "react_enhanced": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.2467,
+      "task3_hard": 0.0,
+      "task4_team": 0.37,
+      "task5_deadline": 0.0225
+    },
+    "ppo_trained": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.0,
+      "task3_hard": 0.0,
+      "task4_team": 0.2233,
+      "task5_deadline": 0.1075
+    },
+    "ppo_gnn": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.0,
+      "task3_hard": 0.0,
+      "task4_team": 0.4017,
+      "task5_deadline": 0.025
+    },
+    "hrl": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.0,
+      "task3_hard": 0.0,
+      "task4_team": 0.4017,
+      "task5_deadline": 0.025
+    },
+    "reflexion": {
+      "task1_easy": 0.0,
+      "task2_medium": 0.2088,
+      "task3_hard": 0.0,
+      "task4_team": 0.4317,
+      "task5_deadline": 0.025
+    }
+  },
+  "rewards": {
+    "rule_based": {
+      "task1_easy": -2.4,
+      "task2_medium": -4.3,
+      "task3_hard": -7.4,
+      "task4_team": -5.2,
+      "task5_deadline": -9.4
+    },
+    "react_enhanced": {
+      "task1_easy": -2.0,
+      "task2_medium": -3.9,
+      "task3_hard": -6.8,
+      "task4_team": -5.2,
+      "task5_deadline": -8.8
+    },
+    "ppo_trained": {
+      "task1_easy": -0.8,
+      "task2_medium": -4.2,
+      "task3_hard": -7.2,
+      "task4_team": -7.3,
+      "task5_deadline": -7.3
+    },
+    "ppo_gnn": {
+      "task1_easy": -2.0,
+      "task2_medium": -4.0,
+      "task3_hard": -7.0,
+      "task4_team": -5.2,
+      "task5_deadline": -9.4
+    },
+    "hrl": {
+      "task1_easy": 2.65,
+      "task2_medium": 0.15,
+      "task3_hard": -7.4,
+      "task4_team": -5.2,
+      "task5_deadline": -9.4
+    },
+    "reflexion": {
+      "task1_easy": 0.0,
+      "task2_medium": -4.3,
+      "task3_hard": 0.0,
+      "task4_team": -4.5,
+      "task5_deadline": -9.4
+    }
+  },
+  "num_episodes": 1
+}
