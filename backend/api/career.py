@@ -1,6 +1,10 @@
 """
 EduPath AI — Career & Job Readiness API
-Job readiness score, interview prep, and event recommendations.
+Team KRIYA | Meta Hackathon 2026
+
+Provides job readiness scoring, field-specific event/hackathon
+recommendations, and project suggestions based on student progress
+and target career field.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

@@ -1,7 +1,10 @@
 """
-EduPath AI — Resources API
-Endpoints for fetching topic resources, tracking link clicks, and marking topics complete.
-Works for ANY topic name — not limited to the hardcoded topic graph.
+EduPath AI — Learning Resource API
+Team KRIYA | Meta Hackathon 2026
+
+Fetches, ranks, and serves real course links for each curriculum topic.
+Supports resource interaction tracking (click logging), topic study
+marking, and AI-generated topic summaries.
 """
 import asyncio
 import logging

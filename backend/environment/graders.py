@@ -1,8 +1,14 @@
 """
-EduPath AI — Task Graders
-Deterministic graders for Task 1-5.
-Each grader scores 0.0 to 1.0.
-Graders accept a StudentProfile and evaluate the final state.
+EduPath AI — Deterministic Task Graders
+Team KRIYA | Meta Hackathon 2026
+
+Five task graders (Task 1–5) that score agent performance on a 0.0–1.0
+scale. Each grader evaluates a different tutoring scenario:
+  Task 1 (Easy):   Python beginner — topic sequencing & prerequisite ordering
+  Task 2 (Medium): Data Analyst prep — topic coverage + quiz performance
+  Task 3 (Hard):   Cross-domain (Doctor → AI) — job readiness + bridging
+  Task 4 (Hard):   Team learning — min/avg readiness across 3 learners
+  Task 5 (Expert): Career transition under deadline — milestones + efficiency
 """
 from typing import List, Dict, Optional
 from environment.models import StudentProfile

@@ -1,16 +1,15 @@
 """
 EduPath AI — Reflexion Agent
-Verbal Reinforcement Learning — reflects on episode trajectories to
-improve decision-making across trials.
+Team KRIYA | Meta Hackathon 2026
 
-Architecture:
-  - Episode Trajectory: Record (state, action, reward) triplets
-  - Reflector: After each episode, generate a verbal reflection on what went wrong
-  - Memory: Store up to K=5 reflections across episodes
-  - Actor: ReAct agent conditioned on past reflections
+Implements Verbal Reinforcement Learning (Reflexion) for tutoring
+policy improvement across episodes. The agent reflects on episode
+trajectories, stores up to K=5 reflections, and conditions future
+decisions on past mistakes.
 
 Reference:
-  - Shinn et al. (2023). "Reflexion: Language Agents with Verbal Reinforcement Learning." NeurIPS.
+  Shinn et al. (2023). "Reflexion: Language Agents with Verbal
+  Reinforcement Learning." NeurIPS.
 """
 import os
 import sys

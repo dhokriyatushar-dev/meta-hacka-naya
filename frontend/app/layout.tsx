@@ -1,3 +1,11 @@
+/**
+ * EduPath AI — Root Layout
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Next.js App Router root layout. Sets global font (Inter), dark mode,
+ * and SEO metadata for the entire application.
+ */
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";

@@ -1,3 +1,11 @@
+/**
+ * EduPath AI — Authentication Page
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Login / Signup page with email+password and Google OAuth via
+ * Supabase Auth. Redirects to dashboard on success.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";

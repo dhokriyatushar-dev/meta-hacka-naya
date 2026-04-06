@@ -1,7 +1,10 @@
 """
 EduPath AI — Quiz API
-Adaptive quiz generation, submission, and scoring.
-Generates quizzes via AI for ANY topic — not limited to hardcoded topics.
+Team KRIYA | Meta Hackathon 2026
+
+Generates adaptive quizzes per topic, scores submissions, and updates
+student progress. Integrates with the badge system to award quiz streak
+achievements.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

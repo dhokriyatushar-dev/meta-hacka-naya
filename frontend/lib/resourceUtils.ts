@@ -1,3 +1,11 @@
+/**
+ * EduPath AI — Resource Display Utilities
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Maps learning-platform names to brand colours and labels for
+ * rendering resource cards in the frontend dashboard.
+ */
+
 export const SOURCE_CONFIG: Record<string, { color: string; label: string }> = {
   "Kaggle":       { color: "#20BEFF", label: "Kaggle Learn"    },
   "freeCodeCamp": { color: "#0A0A23", label: "freeCodeCamp"    },

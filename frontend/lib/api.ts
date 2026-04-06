@@ -1,3 +1,12 @@
+/**
+ * EduPath AI — Frontend API Client
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Typed HTTP helpers (GET/POST) for communicating with the FastAPI backend.
+ * Reads the backend URL from NEXT_PUBLIC_API_URL and provides user-friendly
+ * error messages when the Hugging Face Space is sleeping or unreachable.
+ */
+
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://degree-checker-01-dupath-ai-backend.hf.space").replace(/\/+$/, "");
 
 export async function apiGet<T = any>(path: string): Promise<T> {

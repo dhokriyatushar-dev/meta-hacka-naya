@@ -1,7 +1,10 @@
 """
 EduPath AI — Unified LLM Client
-Uses OpenAI Client for all LLM calls (hackathon requirement).
-Reads API_BASE_URL and MODEL_NAME from environment variables.
+Team KRIYA | Meta Hackathon 2026
+
+Thin abstraction over the OpenAI-compatible API. All LLM calls across
+the platform route through generate_json() or generate_text().
+Reads API_BASE_URL, MODEL_NAME, and HF_TOKEN from environment variables.
 """
 import os
 import json

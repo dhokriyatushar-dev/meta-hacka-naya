@@ -1,7 +1,9 @@
 """
 EduPath AI — Roadmap API
-Generate and retrieve personalized learning roadmaps.
-Syncs to Supabase for persistence.
+Team KRIYA | Meta Hackathon 2026
+
+CRUD endpoints for learning roadmaps: generate, retrieve, quit/archive,
+and dynamic replanning triggered by repeated quiz failures.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

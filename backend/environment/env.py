@@ -1,6 +1,11 @@
 """
 EduPath AI — OpenEnv Environment Engine
-Main environment class with step(), reset(), state() — OpenEnv compliant.
+Team KRIYA | Meta Hackathon 2026
+
+Core RL environment with step(), reset(), state() — fully OpenEnv
+compliant. The AI agent observes student state, takes tutoring actions
+(recommend topic, assign quiz, assign project, etc.), and receives
+shaped reward signals. Quiz outcomes are simulated via BKT.
 """
 import random
 from typing import Dict, Optional, List

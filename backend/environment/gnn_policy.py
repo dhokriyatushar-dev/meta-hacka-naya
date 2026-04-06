@@ -1,19 +1,11 @@
 """
-EduPath AI — Graph Neural Network (GNN) Tutoring Policy
-Replaces flat observation vector with a GNN that encodes the prerequisite
-dependency graph. The policy learns BOTH action type AND topic selection
-end-to-end — no heuristics for topic selection.
+EduPath AI — Graph Neural Network (GNN) Policy
+Team KRIYA | Meta Hackathon 2026
 
-Architecture:
-  - 2-layer GATConv (Graph Attention Network) with 64 hidden dims
-  - Global mean pooling → 64-dim graph embedding
-  - Concatenated with 4 scalar features → 68 dims
-  - Dual action heads: action_type (7 logits) + topic_selection (N logits)
-  - Topic masking: zero out logits for unavailable/completed topics
-
-References:
-  - Velickovic et al. (2018). "Graph Attention Networks." ICLR.
-  - Schulman et al. (2017). "Proximal Policy Optimization." arXiv.
+Implements a GNN-based policy network that operates on the curriculum
+prerequisite graph. Uses GCN message passing to learn topic-level
+representations, then selects actions via an MLP policy head.
+Compatible with Stable-Baselines3 PPO via GNNGymWrapper.
 """
 import numpy as np
 from typing import Dict, List, Tuple, Optional

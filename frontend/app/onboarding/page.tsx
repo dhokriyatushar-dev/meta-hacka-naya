@@ -1,3 +1,12 @@
+/**
+ * EduPath AI — Onboarding Flow
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * 4-step onboarding wizard: resume upload, skill self-assessment,
+ * job description analysis, and time commitment. Supports edit mode
+ * for re-onboarding with preserved profile data.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";

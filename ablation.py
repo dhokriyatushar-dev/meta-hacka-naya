@@ -1,11 +1,10 @@
 """
-EduPath AI — Ablation Study
-Comprehensive comparison of all 6 agents across all 5 tasks.
-Produces results/ablation_results.json and results/ablation_table.md.
+EduPath AI — Ablation Study Runner
+Team KRIYA | Meta Hackathon 2026
 
-Usage:
-  python ablation.py --episodes 5
-  python ablation.py --episodes 10 --agents rule react ppo
+Systematic ablation study comparing agent architectures and
+environment features. Measures the contribution of each component
+(BKT, ICM, GNN, HRL) to overall task performance.
 """
 import os
 import sys

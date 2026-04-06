@@ -1,6 +1,12 @@
 """
-EduPath AI — Student State Management
-Manages student profiles, progress tracking, and state persistence.
+EduPath AI — Student Profile Manager
+Team KRIYA | Meta Hackathon 2026
+
+In-memory student profile store with file-backed persistence.
+Handles CRUD operations for student profiles, quiz recording,
+project completion, badge awards, and job readiness score
+computation. Supports both local JSON storage and optional
+Supabase cloud sync.
 """
 import json
 import os

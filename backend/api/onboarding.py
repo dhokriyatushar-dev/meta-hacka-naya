@@ -1,6 +1,10 @@
 """
-EduPath AI — Onboarding API
-4-step smart onboarding endpoints.
+EduPath AI — Student Onboarding API
+Team KRIYA | Meta Hackathon 2026
+
+Handles the 4-step onboarding flow: resume upload, skill self-assessment,
+job description analysis, and time availability. Creates the student
+profile and triggers initial roadmap generation.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

@@ -1,7 +1,11 @@
 """
-EduPath AI — Student Difficulty Model (Upgraded with BKT)
-Integrates Bayesian Knowledge Tracing for realistic student learning simulation.
-Quiz scores are now predicted using BKT mastery probabilities + prerequisite ordering.
+EduPath AI — Student Difficulty Model (BKT-Integrated)
+Team KRIYA | Meta Hackathon 2026
+
+Models realistic student learning using Bayesian Knowledge Tracing.
+Quiz scores are predicted via BKT mastery probabilities combined
+with prerequisite ordering bonuses and Gaussian noise. Maintains
+both BKT states and legacy skill levels for backward compatibility.
 """
 import random
 from typing import Dict, List, Optional

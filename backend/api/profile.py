@@ -1,6 +1,9 @@
 """
-EduPath AI — Profile API
-Aggregated profile data, roadmap history, and progress snapshots.
+EduPath AI — Student Profile API
+Team KRIYA | Meta Hackathon 2026
+
+Read-only profile endpoint providing a unified view of studentprogress, statistics, badges, and career readiness for the frontend
+dashboard.
 """
 from fastapi import APIRouter, HTTPException
 from environment.student import student_manager

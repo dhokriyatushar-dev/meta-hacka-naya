@@ -1,6 +1,10 @@
 """
 EduPath AI — FastAPI Application Entry Point
-OpenEnv-compliant server with /reset, /step, /state endpoints.
+Team KRIYA | Meta Hackathon 2026
+
+Serves the OpenEnv-compliant RL environment API (/reset, /step, /state, /grade)
+alongside the student-facing REST API for onboarding, quizzes, projects,
+badges, career readiness, and resource discovery.
 """
 import os
 import random

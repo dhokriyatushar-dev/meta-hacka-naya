@@ -1,6 +1,11 @@
 """
 EduPath AI — AI Quiz Generator
-Generates adaptive quizzes per topic via LLM.
+Team KRIYA | Meta Hackathon 2026
+
+Generates adaptive multiple-choice quizzes per curriculum topic.
+Uses LLM to produce conceptual, practical, and tricky questions with
+explanations. Includes scoring logic with adaptive recommendations
+(move forward / review / restart).
 """
 import logging
 import random

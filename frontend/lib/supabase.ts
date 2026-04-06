@@ -1,3 +1,11 @@
+/**
+ * EduPath AI — Supabase Client
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Initialises the Supabase browser client with PKCE auth flow.
+ * Uses placeholder values during static builds to prevent build-time crashes.
+ */
+
 import { createClient } from "@supabase/supabase-js";
 
 // Provide fallback dummy values so Next.js static builds do not crash

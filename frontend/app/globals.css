@@ -1,3 +1,12 @@
+/*
+ * EduPath AI — Global Design System
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Design tokens, glassmorphism cards, gradient text, glow buttons,
+ * micro-animations, progress bars, badge styles, step indicators,
+ * sidebar navigation, and custom scrollbar.
+ */
+
 @import "tailwindcss";
 
 :root {

@@ -1,6 +1,11 @@
 """
 EduPath AI — Core Data Models
-Pydantic models for the OpenEnv-compliant reinforcement learning environment.
+Team KRIYA | Meta Hackathon 2026
+
+Pydantic models defining the OpenEnv interface (Observation, Action,
+Reward, StepResult), student profile schema, curriculum data structures
+(Topic, Resource, ProjectMilestone), quiz/onboarding request types,
+and resource page response models.
 """
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict

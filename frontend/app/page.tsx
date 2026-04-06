@@ -1,3 +1,12 @@
+/**
+ * EduPath AI — Landing Page
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Marketing homepage showcasing platform features, supported fields,
+ * and the 4-step onboarding flow. Includes animated field carousel
+ * and glassmorphism UI.
+ */
+
 "use client";
 
 import Link from "next/link";

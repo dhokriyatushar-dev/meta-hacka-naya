@@ -1,10 +1,10 @@
 """
-EduPath AI — Training Visualization Dashboard Server
-FastAPI server serving the dashboard UI and metrics endpoints.
+EduPath AI — Analytics Dashboard Server
+Team KRIYA | Meta Hackathon 2026
 
-Usage:
-  python dashboard/server.py
-  → Dashboard at http://localhost:7861
+Lightweight Flask server that serves the interactive analytics
+dashboard (dashboard/index.html) for visualising training results,
+ablation studies, and agent comparison charts.
 """
 import os
 import sys

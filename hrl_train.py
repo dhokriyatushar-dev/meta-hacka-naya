@@ -1,10 +1,10 @@
 """
-EduPath AI — HRL Training Script
-Trains the Hierarchical RL agent (Manager + Worker) using PPO.
+EduPath AI — Hierarchical RL Training Script
+Team KRIYA | Meta Hackathon 2026
 
-Usage:
-  python hrl_train.py --task task3_hard --timesteps 50000
-  python hrl_train.py --task all --timesteps 30000
+Trains the hierarchical RL agent (meta-controller + sub-controller)
+using PPO on both levels. The meta-controller selects goals while
+the sub-controller executes curriculum actions within each goal.
 """
 import os
 import sys

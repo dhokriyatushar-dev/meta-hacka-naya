@@ -1,13 +1,15 @@
 """
 EduPath AI — Intrinsic Curiosity Module (ICM)
-Count-based novelty bonus to encourage exploration of novel (topic, action_type)
-combinations during PPO training.
+Team KRIYA | Meta Hackathon 2026
 
-Prevents the agent from getting stuck in quiz→quiz→quiz loops by rewarding
-visits to new state-action pairs.
+Implements the ICM from Pathak et al. (2017) for curiosity-driven
+exploration. Provides intrinsic reward based on prediction error
+of the forward dynamics model, encouraging the agent to explore
+novel state-action pairs.
 
 Reference:
-  - Pathak et al. (2017). "Curiosity-driven Exploration by Self-Supervised Prediction." ICML.
+  Pathak et al. (2017). "Curiosity-driven Exploration by
+  Self-Supervised Prediction." ICML.
 """
 from typing import Dict, Tuple
 

@@ -1,7 +1,11 @@
 """
 EduPath AI — AI Project Evaluator
-Evaluates student projects (mini projects & capstones) using LLM.
-Accepts GitHub repo URLs or project descriptions for evaluation.
+Team KRIYA | Meta Hackathon 2026
+
+Evaluates student project submissions (mini-projects & capstones) using
+an LLM. Produces structured feedback with scores across code quality,
+architecture, functionality, documentation, and best practices.
+Falls back to a deterministic rubric when the LLM is unavailable.
 """
 import logging
 from ai.llm_client import generate_json, is_api_key_set

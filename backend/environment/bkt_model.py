@@ -1,13 +1,16 @@
 """
-EduPath AI — Bayesian Knowledge Tracing (BKT) Student Model
+EduPath AI — Bayesian Knowledge Tracing (BKT) Model
+Team KRIYA | Meta Hackathon 2026
+
 Implements the standard BKT Hidden Markov Model for estimating
-P(student has learned skill) after each interaction.
+P(student knows skill) after each interaction. Used by the student
+difficulty model to predict quiz outcomes and track mastery.
 
 References:
-  - Corbett & Anderson (1995). "Knowledge Tracing: Modeling the Acquisition
-    of Procedural Knowledge." User Modeling and User-Adapted Interaction.
-  - Baker, Corbett, Aleven (2008). "More Accurate Student Modeling through
-    Contextual Estimation of Slip and Guess Probabilities."
+  Corbett & Anderson (1995). "Knowledge Tracing: Modeling the
+  Acquisition of Procedural Knowledge."
+  Baker, Corbett, Aleven (2008). "More Accurate Student Modeling
+  through Contextual Estimation of Slip and Guess Probabilities."
 """
 from typing import Dict, Optional
 from environment.curriculum import TOPIC_GRAPH

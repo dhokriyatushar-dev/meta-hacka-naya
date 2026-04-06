@@ -1,11 +1,10 @@
 """
-EduPath AI — Agent Comparison Evaluation (Upgrade 3)
-Compare 3 agents on all 3 tasks:
-1. Rule-based agent (deterministic fallback)
-2. Enhanced ReAct agent (scratchpad-enhanced rule-based, LLM proxy)
-3. PPO trained agent (neural network)
+EduPath AI — Agent Evaluation & Benchmarking
+Team KRIYA | Meta Hackathon 2026
 
-Produces evaluation_results.json, episode_rewards.csv, and learning_curve.json.
+Evaluates all agent types (Random, Heuristic, PPO, GNN-PPO, HRL,
+Reflexion) across all 5 tasks. Generates comparative performance
+tables and saves results to results/evaluation_results.json.
 """
 import os
 import sys

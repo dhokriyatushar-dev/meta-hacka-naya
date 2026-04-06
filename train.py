@@ -1,7 +1,10 @@
 """
-EduPath AI — PPO Training Script (Upgrade 3)
-Trains a PPO agent on the EduPath environment using stable-baselines3.
-No LLM API key required — the policy is a neural network.
+EduPath AI — PPO Training Script
+Team KRIYA | Meta Hackathon 2026
+
+Trains Stable-Baselines3 PPO agents on the EduPath Gym environment
+across all 5 task configurations. Saves trained models and learning
+curves to the models/ and results/ directories.
 """
 import os
 import sys

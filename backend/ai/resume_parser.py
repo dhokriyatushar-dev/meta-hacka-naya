@@ -1,7 +1,10 @@
 """
-EduPath AI — Resume & JD Parsers
-Extract skills, education, and experience from resume/LinkedIn text.
-Extract required skills from job descriptions.
+EduPath AI — Resume & Job Description Parsers
+Team KRIYA | Meta Hackathon 2026
+
+Extracts structured data from free-text resumes and job descriptions
+using LLM. Normalises skill names and separates required vs. preferred
+qualifications. Falls back to keyword matching when LLM is unavailable.
 """
 import logging
 from ai.llm_client import generate_json, is_api_key_set

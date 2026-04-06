@@ -1,22 +1,11 @@
 """
-EduPath AI — Hierarchical Reinforcement Learning (HRL)
-Two-level hierarchy: Manager (strategy) + Worker (action execution).
+EduPath AI — Hierarchical RL Environment Wrapper
+Team KRIYA | Meta Hackathon 2026
 
-Architecture:
-  Manager Policy (runs every K=5 steps):
-    - Observes student state
-    - Selects a teaching STRATEGY (Discrete(6))
-    - Strategies: prerequisite_fill, quiz_consolidate, project_apply,
-                  resource_reinforce, exploration, job_ready_push
-
-  Worker Policy (runs every step):
-    - Observes student state + current strategy
-    - Selects concrete action (MultiDiscrete([7, N]))
-    - Receives shaped reward based on strategy alignment
-
-Reference:
-  - Vezhnevets et al. (2017). "FeUdal Networks for Hierarchical RL." ICML.
-  - Kulkarni et al. (2016). "Hierarchical Deep RL: Integrating Temporal Abstraction." NIPS.
+Two-level hierarchy: a meta-controller selects high-level goals
+(e.g., "complete topic cluster", "boost quiz score"), and a
+sub-controller executes low-level actions within each goal.
+Built on top of the base EduPathEnv.
 """
 import os
 import sys

@@ -1,9 +1,11 @@
 """
 EduPath AI — Smart Resource Fetcher
-Multi-platform course search with AI-powered ranking.
-Searches across Coursera, Udemy, YouTube, freeCodeCamp, edX, Khan Academy.
-Uses LLM to rank courses by relevance, quality, and reviews.
-Caches results for 7 days in backend/data/resource_cache.json.
+Team KRIYA | Meta Hackathon 2026
+
+Multi-platform course discovery engine. Searches across Coursera, edX,
+Khan Academy, freeCodeCamp, Udemy, and YouTube via DuckDuckGo, then
+ranks results using platform reputation heuristics and optional LLM
+quality scoring. Results are cached for 7 days.
 """
 import os
 import json

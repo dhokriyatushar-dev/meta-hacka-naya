@@ -1,6 +1,11 @@
 """
 EduPath AI — AI Roadmap Generator
-Generates personalized learning roadmaps and topic summaries via LLM.
+Team KRIYA | Meta Hackathon 2026
+
+Generates personalised multi-week learning roadmaps via LLM, complete
+with weekly objectives, resources (no YouTube — per hackathon rules),
+mini-projects, and capstone projects. Supports dynamic replanning when
+repeated quiz failures indicate prerequisite gaps (bridge topic insertion).
 """
 import os
 import json

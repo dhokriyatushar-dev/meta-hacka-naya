@@ -1,7 +1,10 @@
 """
-EduPath AI — Badges API
-Badge management and achievement tracking.
-30 unique, funny, and motivational badges to keep learners engaged.
+EduPath AI — Gamification & Badge System API
+Team KRIYA | Meta Hackathon 2026
+
+Awards achievement badges based on student milestones: first topic
+studied, quiz streaks, project completions, job readiness thresholds,
+and roadmap progress. Checks and awards are idempotent.
 """
 from fastapi import APIRouter, HTTPException
 

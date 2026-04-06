@@ -1,3 +1,12 @@
+/**
+ * EduPath AI — Topic Study Page
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Per-topic learning page with AI-generated summary, ranked course
+ * cards from real platforms, alternative course discovery, downloadable
+ * resources, and mark-as-complete workflow that unlocks quizzes.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";

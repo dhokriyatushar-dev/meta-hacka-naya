@@ -1,3 +1,13 @@
+/**
+ * EduPath AI — Student Dashboard
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Central hub for the student experience: roadmap view, adaptive quizzes,
+ * project submissions with AI evaluation, badge gallery, career readiness
+ * tracking, and profile analytics. Communicates with the FastAPI backend
+ * via the api.ts client.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";

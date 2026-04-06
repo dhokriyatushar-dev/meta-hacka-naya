@@ -1,7 +1,9 @@
 """
-EduPath AI — Projects API
-Submit mini projects & capstone projects for AI evaluation.
-Supports GitHub repo URLs and text submissions.
+EduPath AI — Project Submission & Evaluation API
+Team KRIYA | Meta Hackathon 2026
+
+Endpoints for submitting mini-projects and capstone projects, receiving
+AI-powered evaluations, and tracking submission history.
 """
 import os
 import json

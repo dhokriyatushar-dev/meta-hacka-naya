@@ -1,12 +1,10 @@
 """
-EduPath AI — Inference Script (Upgraded)
-Supports 3 agent modes:
-  --mode react   ReAct agent with working memory (default)
-  --mode rule    Rule-based deterministic agent
-  --mode ppo     PPO trained neural network agent
+EduPath AI — OpenEnv Inference Script
+Team KRIYA | Meta Hackathon 2026
 
-Uses OpenAI Client for LLM calls (hackathon requirement).
-Emits structured [START], [STEP], [END] stdout logs per hackathon spec.
+Runs trained RL agents (PPO, GNN-PPO, HRL, Reflexion) against all 5
+tasks and prints results in the mandatory [START]/[STEP]/[END] log
+format required by the OpenEnv automated evaluator.
 """
 import os
 import sys

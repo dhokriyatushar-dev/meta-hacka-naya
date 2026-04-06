@@ -1,6 +1,12 @@
 """
-EduPath AI — Multi-Field Curriculum System
-Topic graphs with prerequisites and structured resources for any field.
+EduPath AI — Curriculum Graph & Topic Database
+Team KRIYA | Meta Hackathon 2026
+
+Defines the multi-field curriculum as a directed prerequisite graph.
+Contains 70+ topics across tech, healthcare, business, law, and design
+domains, each with curated learning resources, difficulty ratings, and
+estimated study hours. Also includes the project database for mini and
+capstone projects.
 """
 from typing import Dict, List
 from environment.models import Topic, Resource, ResourceType, ProjectMilestone

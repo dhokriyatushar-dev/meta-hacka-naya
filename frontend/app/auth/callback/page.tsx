@@ -1,3 +1,12 @@
+/**
+ * EduPath AI — Auth Callback Handler
+ * Team KRIYA | Meta Hackathon 2026
+ *
+ * Handles Supabase OAuth/email-confirmation redirects. Exchanges auth
+ * codes for sessions and routes users to onboarding or dashboard based
+ * on account age.
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";

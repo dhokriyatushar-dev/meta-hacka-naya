@@ -1,7 +1,10 @@
 """
-EduPath AI — Supabase Database Client
-Syncs student data to Supabase PostgreSQL for persistence.
-Falls back gracefully if Supabase is not configured.
+EduPath AI — Supabase Client & Cloud Sync
+Team KRIYA | Meta Hackathon 2026
+
+Provides a Supabase client wrapper for cloud persistence of student
+profiles, quiz history, project evaluations, and roadmaps. Handles
+upserts, reads, and graceful fallback when Supabase is unavailable.
 """
 import os
 import json
