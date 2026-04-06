@@ -1,14 +1,10 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — HRL Training Script
+Trains the Hierarchical RL agent (Manager + Worker) using PPO.
+
+Usage:
+  python hrl_train.py --task task3_hard --timesteps 50000
+  python hrl_train.py --task all --timesteps 30000
 """
 import os
 import sys

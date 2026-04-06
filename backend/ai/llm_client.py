@@ -1,14 +1,7 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Unified LLM Client
+Uses OpenAI Client for all LLM calls (hackathon requirement).
+Reads API_BASE_URL and MODEL_NAME from environment variables.
 """
 import os
 import json

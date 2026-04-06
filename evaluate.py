@@ -1,14 +1,11 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Agent Comparison Evaluation (Upgrade 3)
+Compare 3 agents on all 3 tasks:
+1. Rule-based agent (deterministic fallback)
+2. Enhanced ReAct agent (scratchpad-enhanced rule-based, LLM proxy)
+3. PPO trained agent (neural network)
+
+Produces evaluation_results.json, episode_rewards.csv, and learning_curve.json.
 """
 import os
 import sys

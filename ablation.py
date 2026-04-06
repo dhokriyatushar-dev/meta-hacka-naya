@@ -1,14 +1,11 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Ablation Study
+Comprehensive comparison of all 6 agents across all 5 tasks.
+Produces results/ablation_results.json and results/ablation_table.md.
+
+Usage:
+  python ablation.py --episodes 5
+  python ablation.py --episodes 10 --agents rule react ppo
 """
 import os
 import sys

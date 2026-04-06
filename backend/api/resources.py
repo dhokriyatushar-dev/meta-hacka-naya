@@ -1,14 +1,7 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Resources API
+Endpoints for fetching topic resources, tracking link clicks, and marking topics complete.
+Works for ANY topic name — not limited to the hardcoded topic graph.
 """
 import asyncio
 import logging

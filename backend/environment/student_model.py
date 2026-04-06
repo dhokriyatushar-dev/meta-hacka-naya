@@ -1,14 +1,7 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Student Difficulty Model (Upgraded with BKT)
+Integrates Bayesian Knowledge Tracing for realistic student learning simulation.
+Quiz scores are now predicted using BKT mastery probabilities + prerequisite ordering.
 """
 import random
 from typing import Dict, List, Optional

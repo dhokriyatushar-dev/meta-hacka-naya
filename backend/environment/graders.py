@@ -1,14 +1,8 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Task Graders
+Deterministic graders for Task 1-5.
+Each grader scores 0.0 to 1.0.
+Graders accept a StudentProfile and evaluate the final state.
 """
 from typing import List, Dict, Optional
 from environment.models import StudentProfile

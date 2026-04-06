@@ -1,14 +1,9 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Smart Resource Fetcher
+Multi-platform course search with AI-powered ranking.
+Searches across Coursera, Udemy, YouTube, freeCodeCamp, edX, Khan Academy.
+Uses LLM to rank courses by relevance, quality, and reviews.
+Caches results for 7 days in backend/data/resource_cache.json.
 """
 import os
 import json

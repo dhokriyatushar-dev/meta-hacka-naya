@@ -1,14 +1,16 @@
 """
-=============================================================================
-Meta Hackathon Submission: EduPath AI
-=============================================================================
-This file is part of the EduPath AI core architecture. 
-It strictly adheres to the OpenEnv reinforcement learning specification.
-Architecture Layer: Backend Logic & State Management
-Design Pattern: Highly modularized, utilizing Pydantic for rigid type safety,
-and designed for deterministic, reproducible inference evaluation.
-=============================================================================
-"""
+EduPath AI — Reflexion Agent
+Verbal Reinforcement Learning — reflects on episode trajectories to
+improve decision-making across trials.
+
+Architecture:
+  - Episode Trajectory: Record (state, action, reward) triplets
+  - Reflector: After each episode, generate a verbal reflection on what went wrong
+  - Memory: Store up to K=5 reflections across episodes
+  - Actor: ReAct agent conditioned on past reflections
+
+Reference:
+  - Shinn et al. (2023). "Reflexion: Language Agents with Verbal Reinforcement Learning." NeurIPS.
 """
 import os
 import sys
