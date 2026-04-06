@@ -12,7 +12,7 @@ from environment.models import (
 )
 from environment.curriculum import TOPIC_GRAPH
 from environment.student import student_manager
-from ai.resource_fetcher import fetch_resources_async
+from ai.resource_fetcher import fetch_resources_async, fetch_alternative_resources_async
 from ai.roadmap_generator import generate_topic_summary
 
 router = APIRouter(prefix="/resources", tags=["resources"])
@@ -69,9 +69,10 @@ async def get_topic_resources(topic_id: str, student_id: str = ""):
     field = student.target_field if student else topic_field
     goal = student.learning_goal if student else f"Learn {topic_name}"
 
-    # Fetch resources via DuckDuckGo (works for ANY topic name)
+    # Fetch resources via multi-platform smart search
     raw_resources = await fetch_resources_async(topic_name, topic_id)
 
+    # Only return top 3 initially (rest available via /alternative endpoint)
     resources = [
         ResourceCard(
             title=r["title"],
@@ -81,7 +82,7 @@ async def get_topic_resources(topic_id: str, student_id: str = ""):
             duration_estimate=r.get("duration_estimate", "~2 hours"),
             resource_type=r.get("resource_type", "course"),
         )
-        for r in raw_resources
+        for r in raw_resources[:3]
     ]
 
     # Generate AI summary (works for ANY topic name)
@@ -110,6 +111,37 @@ async def get_topic_resources(topic_id: str, student_id: str = ""):
         can_mark_complete=can_mark_complete,
         quiz_unlocked=quiz_unlocked,
     )
+
+
+@router.get("/{topic_id}/alternative")
+async def get_alternative_resources(topic_id: str):
+    """
+    Get alternative course suggestions beyond the initial 3.
+    Falls back to a Google search link when exhausted.
+    """
+    topic = _find_topic(topic_id)
+    topic_name = topic.name if topic else _topic_name_from_id(topic_id)
+
+    alt_resources = await fetch_alternative_resources_async(topic_name, topic_id, offset=3)
+
+    return {
+        "topic_id": topic_id,
+        "topic_name": topic_name,
+        "resources": [
+            {
+                "title": r.get("title", ""),
+                "url": r.get("url", ""),
+                "source": r.get("source", "Other"),
+                "description": r.get("description", ""),
+                "duration_estimate": r.get("duration_estimate", "~2 hours"),
+                "resource_type": r.get("resource_type", "course"),
+                "is_fallback": r.get("is_fallback", False),
+                "quality_score": r.get("quality_score", 0),
+            }
+            for r in alt_resources
+        ],
+        "has_more": not any(r.get("is_fallback") for r in alt_resources),
+    }
 
 
 @router.post("/{topic_id}/link-clicked")

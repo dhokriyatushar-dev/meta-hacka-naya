@@ -142,6 +142,7 @@ class Observation(BaseModel):
     weekly_hours: int
     target_field: str
     learning_goal: str
+    mastery_probabilities: Dict[str, float] = {}  # BKT P(known) per topic
 
 
 class Action(BaseModel):

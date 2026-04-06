@@ -22,7 +22,7 @@ from environment.env import EduPathEnv
 from environment.models import Action, ActionType, QuizDifficulty
 from environment.student import student_manager
 from environment.curriculum import TOPIC_GRAPH, get_available_topics
-from environment.graders import grade_task1, grade_task2, grade_task3
+from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
 
 
 TASK_PROFILES = {
@@ -51,19 +51,53 @@ TASK_PROFILES = {
         ],
         "resume_skills": ["medicine", "clinical research", "biology"],
     },
+    "task4_team": {
+        "name": "Sam Engineer",
+        "target_field": "business",
+        "learning_goal": "Cross-train from tech into business strategy",
+        "weekly_hours": 10,
+        "skills": [
+            {"skill": "Python", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Data Structures", "level": "Intermediate", "proficiency": 0.6},
+        ],
+        "resume_skills": ["python", "data_structures", "web_development"],
+    },
+    "task5_deadline": {
+        "name": "Nurse Taylor",
+        "target_field": "healthcare",
+        "learning_goal": "Healthcare AI Product Manager",
+        "weekly_hours": 7,
+        "skills": [
+            {"skill": "Biology", "level": "Expert", "proficiency": 0.85},
+            {"skill": "Healthcare", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Statistics", "level": "Basic", "proficiency": 0.2},
+        ],
+        "resume_skills": ["nursing", "healthcare", "biology"],
+    },
 }
 
 TASK_MAX_STEPS = {
     "task1_easy": 30,
     "task2_medium": 50,
     "task3_hard": 80,
+    "task4_team": 100,
+    "task5_deadline": 100,
 }
 
-GRADERS = {
-    "task1_easy": grade_task1,
-    "task2_medium": grade_task2,
-    "task3_hard": grade_task3,
-}
+
+def _get_grader(task_id: str, steps_used: int = 0):
+    """Get the appropriate grader function for a task."""
+    if task_id == "task1_easy":
+        return lambda student: grade_task1(student)
+    elif task_id == "task2_medium":
+        return lambda student: grade_task2(student)
+    elif task_id == "task3_hard":
+        return lambda student: grade_task3(student)
+    elif task_id == "task4_team":
+        return lambda student: grade_task4([student], steps_used=steps_used)
+    elif task_id == "task5_deadline":
+        return lambda student: grade_task5(student, steps_used=steps_used)
+    return lambda student: 0.0
 
 
 # ═══════════════════════════════════════════════════════════
@@ -238,7 +272,8 @@ def run_rule_based(task_id: str, seed: int = 42, max_steps: int = None) -> tuple
             break
 
     student = student_manager.get(student.id)
-    score = GRADERS[task_id](student)
+    grader = _get_grader(task_id, steps_used=steps)
+    score = grader(student)
     return score, total_reward, steps
 
 
@@ -271,7 +306,8 @@ def run_react(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
             break
 
     student = student_manager.get(student.id)
-    score = GRADERS[task_id](student)
+    grader = _get_grader(task_id, steps_used=steps)
+    score = grader(student)
     return score, total_reward, steps
 
 
@@ -303,15 +339,137 @@ def run_ppo(task_id: str, model_path: str = None, seed: int = 42, max_steps: int
 
     while not done and steps < max_steps:
         action, _ = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = env.step(int(action))
+        obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
         done = terminated or truncated
         steps += 1
 
     # Grade using the student created by gym wrapper
     student = student_manager.get(env._student_id)
-    score = GRADERS[task_id](student) if student else 0.0
+    if student:
+        grader = _get_grader(task_id, steps_used=steps)
+        score = grader(student)
+    else:
+        score = 0.0
     return score, total_reward, steps
+
+
+def run_ppo_gnn(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
+    """Run PPO-GNN trained agent on a task."""
+    try:
+        from stable_baselines3 import PPO as PPOModel
+        from gym_wrapper import GNNGymWrapper
+    except ImportError:
+        return run_rule_based(task_id, seed, max_steps)
+
+    max_steps = max_steps or TASK_MAX_STEPS[task_id]
+    model_path = os.path.join("models", f"ppo_gnn_{task_id}")
+
+    if not os.path.exists(model_path + ".zip"):
+        return run_rule_based(task_id, seed, max_steps)
+
+    model = PPOModel.load(model_path)
+    env = GNNGymWrapper(task_id=task_id, seed=seed)
+    obs, _ = env.reset(seed=seed)
+
+    total_reward = 0.0
+    steps = 0
+    done = False
+
+    while not done and steps < max_steps:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, terminated, truncated, info = env.step(action)
+        total_reward += reward
+        done = terminated or truncated
+        steps += 1
+
+    student = student_manager.get(env._student_id)
+    if student:
+        grader = _get_grader(task_id, steps_used=steps)
+        score = grader(student)
+    else:
+        score = 0.0
+    return score, total_reward, steps
+
+
+def run_hrl(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
+    """Run HRL trained agent on a task."""
+    try:
+        from stable_baselines3 import PPO as PPOModel
+        from environment.hierarchical_env import HierarchicalEduPathEnv
+    except ImportError:
+        return run_rule_based(task_id, seed, max_steps)
+
+    max_steps = max_steps or TASK_MAX_STEPS[task_id]
+    model_path = os.path.join("models", f"hrl_{task_id}")
+
+    if not os.path.exists(model_path + ".zip"):
+        return run_rule_based(task_id, seed, max_steps)
+
+    model = PPOModel.load(model_path)
+    env = HierarchicalEduPathEnv(task_id=task_id, seed=seed)
+    obs, _ = env.reset(seed=seed)
+
+    total_reward = 0.0
+    steps = 0
+    done = False
+
+    while not done and steps < max_steps:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, terminated, truncated, info = env.step(action)
+        total_reward += reward
+        done = terminated or truncated
+        steps += 1
+
+    student = student_manager.get(env._student_id)
+    if student:
+        grader = _get_grader(task_id, steps_used=steps)
+        score = grader(student)
+    else:
+        score = 0.0
+    return score, total_reward, steps
+
+
+def run_reflexion(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
+    """Run Reflexion agent on a task (runs 3 internal reflection episodes, returns best)."""
+    max_steps = max_steps or TASK_MAX_STEPS[task_id]
+    from ai.reflexion_agent import ReflexionAgent
+    agent = ReflexionAgent(max_reflections=5)
+    best_score = 0.0
+    best_reward = 0.0
+    best_steps = 0
+
+    for ep in range(3):
+        agent.new_episode()
+        env, student, obs_dict = _create_env_and_student(task_id, seed + ep)
+        total_reward = 0.0
+        
+        for step in range(max_steps):
+            action = agent.decide(obs_dict)
+            action_obj = Action(
+                type=ActionType(action["type"]),
+                topic_id=action.get("topic_id"),
+            )
+            result = env.step(action_obj)
+            new_obs = result.observation.model_dump()
+            total_reward += result.reward.value
+            agent.record_step(action, result.reward.value, new_obs, result.done)
+            obs_dict = new_obs
+            steps = step + 1
+            if result.done:
+                break
+
+        student = student_manager.get(student.id)
+        grader = _get_grader(task_id, steps_used=steps)
+        score = grader(student)
+        agent.reflect(final_score=score)
+
+        if score > best_score:
+            best_score = score
+            best_reward = total_reward
+            best_steps = steps
+
+    return best_score, best_reward, best_steps
 
 
 # ═══════════════════════════════════════════════════════════
@@ -322,18 +480,24 @@ def evaluate_all(num_episodes: int = 10, results_dir: str = "results"):
     """Evaluate all agents on all tasks."""
     os.makedirs(results_dir, exist_ok=True)
 
-    agents = ["rule_based", "react_enhanced", "ppo_trained"]
+    agents = ["rule_based", "react_enhanced", "ppo_trained", "ppo_gnn", "hrl", "reflexion"]
     agent_runners = {
         "rule_based": run_rule_based,
         "react_enhanced": run_react,
         "ppo_trained": run_ppo,
+        "ppo_gnn": run_ppo_gnn,
+        "hrl": run_hrl,
+        "reflexion": run_reflexion,
     }
     agent_display = {
         "rule_based": "Rule-based",
         "react_enhanced": "LLM ReAct",
-        "ppo_trained": "PPO Trained",
+        "ppo_trained": "PPO MLP Trained",
+        "ppo_gnn": "PPO GNN Trained",
+        "hrl": "HRL Strategy",
+        "reflexion": "Reflexion",
     }
-    tasks = ["task1_easy", "task2_medium", "task3_hard"]
+    tasks = ["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"]
 
     results = {}
     reward_results = {}
@@ -372,33 +536,20 @@ def evaluate_all(num_episodes: int = 10, results_dir: str = "results"):
             print(f"score={mean_score:.4f}  reward={mean_reward:.2f}")
 
     # Print comparison table
-    print(f"\n{'='*70}")
+    print(f"\n{'='*90}")
     print(f"  AGENT COMPARISON — MEAN SCORES OVER {num_episodes} EPISODES")
-    print(f"{'='*70}")
-    print(f"  {'Agent':<18} | {'Task1':>7} | {'Task2':>7} | {'Task3':>7} | {'Avg':>7}")
-    print(f"  {'-'*18}-+-{'-'*7}-+-{'-'*7}-+-{'-'*7}-+-{'-'*7}")
+    print(f"{'='*90}")
+    print(f"  {'Agent':<18} | {'T1':>6} | {'T2':>6} | {'T3':>6} | {'T4':>6} | {'T5':>6} | {'Avg':>6}")
+    print(f"  {'-'*18}-+-{'-'*6}-+-{'-'*6}-+-{'-'*6}-+-{'-'*6}-+-{'-'*6}-+-{'-'*6}")
 
     for agent_type in agents:
         name = agent_display[agent_type]
-        t1 = results[agent_type].get("task1_easy", 0.0)
-        t2 = results[agent_type].get("task2_medium", 0.0)
-        t3 = results[agent_type].get("task3_hard", 0.0)
-        avg = (t1 + t2 + t3) / 3
-        print(f"  {name:<18} | {t1:>7.4f} | {t2:>7.4f} | {t3:>7.4f} | {avg:>7.4f}")
+        task_scores = [results[agent_type].get(t, 0.0) for t in tasks]
+        avg = sum(task_scores) / len(task_scores) if task_scores else 0.0
+        scores_str = " | ".join(f"{s:>6.3f}" for s in task_scores)
+        print(f"  {name:<18} | {scores_str} | {avg:>6.3f}")
 
-    print(f"{'='*70}")
-
-    # Reward comparison
-    print(f"\n  {'Agent':<18} | {'Task1':>7} | {'Task2':>7} | {'Task3':>7} | {'Avg':>7}")
-    print(f"  {'-'*18}-+-{'-'*7}-+-{'-'*7}-+-{'-'*7}-+-{'-'*7}")
-    for agent_type in agents:
-        name = agent_display[agent_type]
-        r1 = reward_results[agent_type].get("task1_easy", 0.0)
-        r2 = reward_results[agent_type].get("task2_medium", 0.0)
-        r3 = reward_results[agent_type].get("task3_hard", 0.0)
-        avg = (r1 + r2 + r3) / 3
-        print(f"  {name:<18} | {r1:>7.2f} | {r2:>7.2f} | {r3:>7.2f} | {avg:>7.2f}")
-    print(f"{'='*70}\n")
+    print(f"{'='*90}\n")
 
     # Save results
     full_results = {
@@ -428,7 +579,7 @@ def evaluate_all(num_episodes: int = 10, results_dir: str = "results"):
 def _generate_learning_curve(results_dir: str):
     """Combine per-task learning curves into a single JSON."""
     combined = {}
-    for task_id in ["task1_easy", "task2_medium", "task3_hard"]:
+    for task_id in ["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"]:
         curve_path = os.path.join(results_dir, f"learning_curve_{task_id}.json")
         if os.path.exists(curve_path):
             with open(curve_path, "r") as f:

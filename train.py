@@ -33,20 +33,30 @@ def train_ppo(
     save_dir: str = "models",
     results_dir: str = "results",
     verbose: int = 1,
+    policy_type: str = "mlp",
+    use_curiosity: bool = False,
 ):
     """Train a PPO agent on EduPath environment."""
     from stable_baselines3 import PPO
     from stable_baselines3.common.env_checker import check_env
     from stable_baselines3.common.callbacks import BaseCallback
 
+    is_gnn = policy_type == "gnn"
+    policy_label = "GNN" if is_gnn else "MLP"
+    curiosity_label = " + ICM" if use_curiosity else ""
+
     print(f"\n{'='*60}")
-    print(f"  EduPath AI — PPO Training")
+    print(f"  EduPath AI — PPO Training ({policy_label}{curiosity_label})")
     print(f"  Task: {task_id}")
     print(f"  Timesteps: {total_timesteps}")
     print(f"{'='*60}\n")
 
     # Create environment
-    env = EduPathGymEnv(task_id=task_id, seed=seed)
+    if is_gnn:
+        from gym_wrapper import GNNGymWrapper
+        env = GNNGymWrapper(task_id=task_id, seed=seed, use_curiosity=use_curiosity)
+    else:
+        env = EduPathGymEnv(task_id=task_id, seed=seed)
 
     # Check environment
     print("Checking environment compatibility...")
@@ -65,7 +75,6 @@ def train_ppo(
             self.current_rewards = []
 
         def _on_step(self) -> bool:
-            # Collect rewards for current step
             if self.locals.get("dones") is not None:
                 for i, done in enumerate(self.locals["dones"]):
                     if done:
@@ -105,7 +114,10 @@ def train_ppo(
 
     # Save model
     os.makedirs(save_dir, exist_ok=True)
-    model_path = os.path.join(save_dir, f"ppo_edupath_{task_id}")
+    if is_gnn:
+        model_path = os.path.join(save_dir, f"ppo_gnn_{task_id}")
+    else:
+        model_path = os.path.join(save_dir, f"ppo_edupath_{task_id}")
     model.save(model_path)
     print(f"Model saved to {model_path}.zip")
 
@@ -119,7 +131,7 @@ def train_ppo(
         steps = 0
         while not done and steps < 100:
             action, _ = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = env.step(int(action))
+            obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
             done = terminated or truncated
             steps += 1
@@ -134,6 +146,8 @@ def train_ppo(
     os.makedirs(results_dir, exist_ok=True)
     learning_curve = {
         "task_id": task_id,
+        "policy_type": policy_type,
+        "curiosity": use_curiosity,
         "total_timesteps": total_timesteps,
         "training_time_seconds": round(train_time, 1),
         "eval_mean_reward": round(float(mean_reward), 4),
@@ -151,7 +165,8 @@ def train_ppo(
         },
     }
 
-    curve_path = os.path.join(results_dir, f"learning_curve_{task_id}.json")
+    suffix = f"_gnn" if is_gnn else ""
+    curve_path = os.path.join(results_dir, f"learning_curve_{task_id}{suffix}.json")
     with open(curve_path, "w") as f:
         json.dump(learning_curve, f, indent=2)
     print(f"Learning curve saved to {curve_path}")
@@ -159,25 +174,31 @@ def train_ppo(
     return model, learning_curve
 
 
-def train_all_tasks(total_timesteps: int = 50000):
-    """Train PPO on all 3 tasks."""
+def train_all_tasks(total_timesteps: int = 50000, policy_type: str = "mlp",
+                    use_curiosity: bool = False):
+    """Train PPO on all tasks."""
     results = {}
-    for task_id in ["task1_easy", "task2_medium", "task3_hard"]:
+    all_tasks = ["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"]
+    for task_id in all_tasks:
         print(f"\n{'#'*60}")
-        print(f"  Training on {task_id}")
+        print(f"  Training on {task_id} (policy={policy_type})")
         print(f"{'#'*60}")
-        _, curve = train_ppo(task_id=task_id, total_timesteps=total_timesteps)
+        _, curve = train_ppo(
+            task_id=task_id, total_timesteps=total_timesteps,
+            policy_type=policy_type, use_curiosity=use_curiosity,
+        )
         results[task_id] = curve
 
     # Save combined results
-    combined_path = os.path.join("results", "learning_curve.json")
+    suffix = "_gnn" if policy_type == "gnn" else ""
+    combined_path = os.path.join("results", f"learning_curve{suffix}.json")
     with open(combined_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nCombined results saved to {combined_path}")
 
     # Print summary
     print(f"\n{'='*60}")
-    print(f"  TRAINING SUMMARY")
+    print(f"  TRAINING SUMMARY ({policy_type.upper()})")
     print(f"{'='*60}")
     for task_id, curve in results.items():
         print(f"  {task_id}: mean_reward={curve['eval_mean_reward']:.3f} "
@@ -188,7 +209,7 @@ def train_all_tasks(total_timesteps: int = 50000):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train PPO on EduPath AI")
     parser.add_argument("--task", type=str, default="task2_medium",
-                        choices=["task1_easy", "task2_medium", "task3_hard", "all"],
+                        choices=["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline", "all"],
                         help="Task to train on (or 'all')")
     parser.add_argument("--timesteps", type=int, default=50000,
                         help="Total training timesteps")
@@ -196,14 +217,25 @@ if __name__ == "__main__":
                         help="Learning rate")
     parser.add_argument("--verbose", type=int, default=1,
                         help="Verbosity level")
+    parser.add_argument("--policy", type=str, default="mlp",
+                        choices=["mlp", "gnn"],
+                        help="Policy type: mlp (default) or gnn (graph neural network)")
+    parser.add_argument("--curiosity", action="store_true",
+                        help="Enable Intrinsic Curiosity Module (ICM)")
     args = parser.parse_args()
 
     if args.task == "all":
-        train_all_tasks(total_timesteps=args.timesteps)
+        train_all_tasks(
+            total_timesteps=args.timesteps,
+            policy_type=args.policy,
+            use_curiosity=args.curiosity,
+        )
     else:
         train_ppo(
             task_id=args.task,
             total_timesteps=args.timesteps,
             learning_rate=args.lr,
             verbose=args.verbose,
+            policy_type=args.policy,
+            use_curiosity=args.curiosity,
         )

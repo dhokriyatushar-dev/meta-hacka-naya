@@ -100,3 +100,76 @@ async def get_roadmap(student_id: str):
         pass
 
     raise HTTPException(404, "Roadmap not found. Generate one first.")
+
+
+@router.post("/archive")
+async def archive_roadmap(data: RoadmapRequest):
+    """Archive the current roadmap to history, then clear it."""
+    student = student_manager.get(data.student_id)
+    if not student:
+        raise HTTPException(404, "Student not found.")
+
+    # Load current roadmap
+    roadmap_file = os.path.join(DATA_DIR, f"roadmap_{data.student_id}.json")
+    current_roadmap = None
+
+    if os.path.exists(roadmap_file):
+        with open(roadmap_file, "r") as f:
+            current_roadmap = json.load(f)
+
+    if not current_roadmap:
+        try:
+            from db.supabase_client import get_roadmap as sb_get_roadmap
+            current_roadmap = sb_get_roadmap(data.student_id)
+        except Exception:
+            pass
+
+    if not current_roadmap:
+        raise HTTPException(404, "No active roadmap to archive.")
+
+    # Calculate completion percentage
+    total_weeks = len(current_roadmap.get("weeks", []))
+    completed_topics = student.completed_topics or []
+    topics_in_roadmap = []
+    for week in current_roadmap.get("weeks", []):
+        for skill in week.get("skillsCovered", []):
+            topics_in_roadmap.append(skill.lower().replace(" ", "_"))
+
+    covered = [t for t in topics_in_roadmap if t in completed_topics or t.replace("_", " ").title() in [ct.replace("_", " ").title() for ct in completed_topics]]
+    completion_pct = (len(covered) / max(len(topics_in_roadmap), 1)) * 100
+
+    # Archive to Supabase
+    try:
+        from db.supabase_client import archive_roadmap as sb_archive, delete_current_roadmap
+        sb_archive(data.student_id, current_roadmap, completed_topics, completion_pct)
+        delete_current_roadmap(data.student_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Supabase archive failed: {e}")
+
+    # Delete local cache
+    if os.path.exists(roadmap_file):
+        os.remove(roadmap_file)
+
+    return {
+        "message": "Roadmap archived successfully",
+        "completion_percentage": round(completion_pct, 1),
+        "topics_covered": completed_topics,
+    }
+
+
+@router.delete("/{student_id}")
+async def delete_roadmap(student_id: str):
+    """Delete the current roadmap without archiving."""
+    roadmap_file = os.path.join(DATA_DIR, f"roadmap_{student_id}.json")
+    if os.path.exists(roadmap_file):
+        os.remove(roadmap_file)
+
+    try:
+        from db.supabase_client import delete_current_roadmap
+        delete_current_roadmap(student_id)
+    except Exception:
+        pass
+
+    return {"message": "Roadmap deleted"}
+

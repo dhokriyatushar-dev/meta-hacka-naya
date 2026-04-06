@@ -112,6 +112,9 @@ class EduPathEnv:
         skill_levels = student_manager.get_skill_levels(self.student_id)
         quiz_summary = {q.topic_id: q.score for q in student.quiz_history}
 
+        # Get BKT mastery probabilities
+        mastery_probs = self.difficulty_model.get_all_mastery_probabilities()
+
         return Observation(
             student_id=student.id,
             completed_topics=student.completed_topics,
@@ -126,6 +129,7 @@ class EduPathEnv:
             weekly_hours=student.weekly_hours,
             target_field=field,
             learning_goal=student.learning_goal,
+            mastery_probabilities=mastery_probs,
         )
 
     def _calculate_reward(self, action: Action) -> Reward:

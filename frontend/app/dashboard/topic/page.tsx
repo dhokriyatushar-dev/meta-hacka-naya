@@ -36,6 +36,12 @@ function TopicContent() {
   const [canMarkComplete, setCanMarkComplete] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
 
+  // Alternative courses state
+  const [altCourses, setAltCourses] = useState<any[]>([]);
+  const [loadingAlt, setLoadingAlt] = useState(false);
+  const [showAlt, setShowAlt] = useState(false);
+  const [noMoreCourses, setNoMoreCourses] = useState(false);
+
   useEffect(() => {
     const fetchTopic = async () => {
       try {
@@ -85,13 +91,31 @@ function TopicContent() {
       });
       
       if (data.quiz_unlocked) {
-        // Update local state to show 'Completed ✓' button instead of instantly redirecting
         setTopicData(prev => prev ? { ...prev, quiz_unlocked: true } : prev);
       }
     } catch (err: any) {
       alert(err.message || "Failed to mark complete. Did you click a resource link first?");
     } finally {
       setMarkingComplete(false);
+    }
+  };
+
+  const handleTryAnotherCourse = async () => {
+    setLoadingAlt(true);
+    try {
+      const data = await apiGet(`/resources/${topicId}/alternative`);
+      if (data.resources && data.resources.length > 0) {
+        setAltCourses(data.resources);
+        setShowAlt(true);
+        setNoMoreCourses(!data.has_more);
+      } else {
+        setNoMoreCourses(true);
+      }
+    } catch (err) {
+      console.error("Failed to load alternative courses:", err);
+      setNoMoreCourses(true);
+    } finally {
+      setLoadingAlt(false);
     }
   };
 
@@ -126,6 +150,53 @@ function TopicContent() {
 
   if (!topicData) return null;
 
+  const renderCourseCard = (res: any, i: number, isFirst: boolean = false) => {
+    const config = SOURCE_CONFIG[res.source] || SOURCE_CONFIG["Other"] || { color: "#6B7280", label: res.source || "Resource" };
+    const isFallback = res.is_fallback;
+    return (
+      <div key={i} className="glass-card p-5 flex flex-col h-full hover:scale-[1.02] transition-transform relative">
+        {/* Top Pick badge for first result */}
+        {isFirst && !isFallback && (
+          <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[9px] font-bold z-10"
+            style={{ background: "linear-gradient(135deg, var(--accent-blue), var(--accent-purple))", color: "white" }}>
+            🏆 Top Pick
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: `${config.color}20`, color: config.color }}>
+            {config.label}
+          </span>
+          <div className="flex items-center gap-2">
+            {res.rating && (
+              <span className="text-xs font-bold" style={{ color: "var(--accent-amber)" }}>
+                ⭐ {res.rating.toFixed(1)}
+              </span>
+            )}
+            <span className="text-xs opacity-50">{res.duration_estimate}</span>
+          </div>
+        </div>
+        <h3 className="font-bold text-sm mb-2 line-clamp-2">{res.title}</h3>
+        <p className="text-xs opacity-70 mb-2 flex-grow line-clamp-3">{res.description}</p>
+        
+        {/* AI recommendation reason */}
+        {res.ai_reason && (
+          <div className="text-[10px] mb-3 px-2 py-1 rounded-lg" style={{ background: "rgba(139,92,246,0.1)", color: "var(--accent-purple)" }}>
+            🤖 {res.ai_reason}
+          </div>
+        )}
+        
+        <button 
+          onClick={() => handleResourceClick(res.url)}
+          className="w-full text-center py-2 rounded-lg text-sm font-bold transition-all mt-auto"
+          style={{ background: `${config.color}15`, color: config.color, border: `1px solid ${config.color}30` }}
+        >
+          {isFallback ? "🔍 Search on Google →" : "Go to Course →"}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen p-6 md:p-12" style={{ background: "var(--bg-primary)" }}>
       <Link href="/dashboard" className="text-sm mb-6 inline-block hover:underline" style={{ color: "var(--text-secondary)" }}>
@@ -135,8 +206,7 @@ function TopicContent() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Topic: {topicData.topic_name}</h1>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          {/* Estimated time could be aggregated from resources */}
-          Select a free resource below to start learning.
+          AI-ranked courses from top platforms. Best matches shown first.
         </p>
       </div>
 
@@ -149,32 +219,52 @@ function TopicContent() {
         </div>
       </div>
 
-      <h2 className="text-sm font-bold opacity-50 mb-4 tracking-wider">FREE COURSES & RESOURCES</h2>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {topicData.resources.map((res, i) => {
-          const config = SOURCE_CONFIG[res.source] || SOURCE_CONFIG["Other"];
-          return (
-            <div key={i} className="glass-card p-5 flex flex-col h-full hover:scale-[1.02] transition-transform">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: `${config.color}20`, color: config.color }}>
-                  {config.label}
-                </span>
-                <span className="text-xs opacity-50">{res.duration_estimate}</span>
-              </div>
-              <h3 className="font-bold text-sm mb-2 line-clamp-2">{res.title}</h3>
-              <p className="text-xs opacity-70 mb-4 flex-grow line-clamp-3">{res.description}</p>
-              
-              <button 
-                onClick={() => handleResourceClick(res.url)}
-                className="w-full text-center py-2 rounded-lg text-sm font-bold transition-all mt-auto"
-                style={{ background: `${config.color}15`, color: config.color, border: `1px solid ${config.color}30` }}
-              >
-                Go to Course →
-              </button>
-            </div>
-          );
-        })}
+      <h2 className="text-sm font-bold opacity-50 mb-4 tracking-wider">🏅 TOP COURSES & RESOURCES</h2>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        {topicData.resources.map((res, i) => renderCourseCard(res, i, i === 0))}
       </div>
+
+      {/* Try Another Course button */}
+      <div className="flex items-center gap-3 mb-8">
+        <button
+          onClick={handleTryAnotherCourse}
+          disabled={loadingAlt || (showAlt && noMoreCourses)}
+          className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50"
+          style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)", border: "1px solid rgba(139,92,246,0.3)" }}
+        >
+          {loadingAlt ? (
+            <>
+              <span className="animate-spin">↻</span> Finding more courses...
+            </>
+          ) : showAlt && noMoreCourses ? (
+            "No more courses available"
+          ) : (
+            <>🔄 Try Another Course</>
+          )}
+        </button>
+
+        {showAlt && noMoreCourses && (
+          <a
+            href={`https://www.google.com/search?q=${topicData.topic_name.replace(/ /g, '+')}+best+free+course+${new Date().getFullYear()}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:scale-105"
+            style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)", border: "1px solid rgba(79,110,247,0.3)" }}
+          >
+            🔍 Search on Google
+          </a>
+        )}
+      </div>
+
+      {/* Alternative courses section */}
+      {showAlt && altCourses.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-sm font-bold opacity-50 mb-4 tracking-wider">🔄 MORE COURSES</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {altCourses.map((res, i) => renderCourseCard(res, i + 10, false))}
+          </div>
+        </div>
+      )}
 
       {/* ── Download Resources Section ── */}
       <h2 className="text-sm font-bold opacity-50 mb-4 tracking-wider">📥 DOWNLOAD NOTES & RESOURCES</h2>

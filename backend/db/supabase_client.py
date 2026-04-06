@@ -73,6 +73,7 @@ def upsert_student(student_data: dict) -> bool:
             "topics_studied": json.dumps(student_data.get("topics_studied", [])),
             "clicked_resource_links": json.dumps(student_data.get("clicked_resource_links", {})),
             "badges": json.dumps(student_data.get("badges", [])),
+            "mastery_probabilities": json.dumps(student_data.get("mastery_probabilities", {})),
             "onboarding_complete": True,
         }
 
@@ -97,7 +98,7 @@ def get_student(student_id: str) -> Optional[dict]:
             # Parse JSON fields back
             for field in ["resume_skills", "self_assessed_skills", "jd_required_skills",
                           "completed_topics", "completed_projects", "topics_studied",
-                          "clicked_resource_links", "badges"]:
+                          "clicked_resource_links", "badges", "mastery_probabilities"]:
                 if isinstance(row.get(field), str):
                     try:
                         row[field] = json.loads(row[field])
@@ -199,3 +200,145 @@ def get_roadmap(student_id: str) -> Optional[dict]:
     except Exception as e:
         logger.error(f"Failed to get roadmap from Supabase: {e}")
         return None
+
+
+# ── Roadmap History Operations ──
+
+def archive_roadmap(student_id: str, roadmap_data: dict, topics_covered: list = None, completion_pct: float = 0.0) -> bool:
+    """Archive a roadmap to history before clearing it."""
+    client = _get_client()
+    if not client:
+        return False
+
+    try:
+        db_data = {
+            "student_id": student_id,
+            "roadmap_data": json.dumps(roadmap_data),
+            "topics_covered": topics_covered or [],
+            "completion_percentage": completion_pct,
+        }
+        client.table("roadmap_history").insert(db_data).execute()
+        logger.info(f"Roadmap archived for student {student_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to archive roadmap: {e}")
+        return False
+
+
+def get_roadmap_history(student_id: str) -> list:
+    """Get all archived roadmaps for a student."""
+    client = _get_client()
+    if not client:
+        return []
+
+    try:
+        result = (
+            client.table("roadmap_history")
+            .select("*")
+            .eq("student_id", student_id)
+            .order("archived_at", desc=True)
+            .execute()
+        )
+        rows = result.data or []
+        for row in rows:
+            if isinstance(row.get("roadmap_data"), str):
+                try:
+                    row["roadmap_data"] = json.loads(row["roadmap_data"])
+                except Exception:
+                    pass
+        return rows
+    except Exception as e:
+        logger.error(f"Failed to get roadmap history: {e}")
+        return []
+
+
+def delete_current_roadmap(student_id: str) -> bool:
+    """Delete the current active roadmap from Supabase."""
+    client = _get_client()
+    if not client:
+        return False
+
+    try:
+        client.table("student_roadmaps").delete().eq("student_id", student_id).execute()
+        logger.info(f"Current roadmap deleted for student {student_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete roadmap: {e}")
+        return False
+
+
+# ── Progress Snapshot Operations ──
+
+def save_progress_snapshot(student_id: str, snapshot: dict) -> bool:
+    """Save a progress snapshot."""
+    client = _get_client()
+    if not client:
+        return False
+
+    try:
+        db_data = {
+            "student_id": student_id,
+            "topics_completed": snapshot.get("topics_completed", []),
+            "quizzes_passed": snapshot.get("quizzes_passed", 0),
+            "projects_completed": snapshot.get("projects_completed", 0),
+            "job_readiness_score": snapshot.get("job_readiness_score", 0.0),
+            "total_study_hours": snapshot.get("total_study_hours", 0.0),
+        }
+        client.table("progress_snapshots").insert(db_data).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save progress snapshot: {e}")
+        return False
+
+
+def get_progress_snapshots(student_id: str) -> list:
+    """Get progress history for a student."""
+    client = _get_client()
+    if not client:
+        return []
+
+    try:
+        result = (
+            client.table("progress_snapshots")
+            .select("*")
+            .eq("student_id", student_id)
+            .order("snapshot_date", desc=True)
+            .limit(30)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Failed to get progress snapshots: {e}")
+        return []
+
+
+def get_student_stats(student_id: str) -> dict:
+    """Get aggregated stats for profile display."""
+    client = _get_client()
+    stats = {
+        "total_roadmaps": 0,
+        "total_quizzes": 0,
+        "total_projects": 0,
+        "quiz_results": [],
+    }
+    if not client:
+        return stats
+
+    try:
+        # Count archived roadmaps
+        history = client.table("roadmap_history").select("id").eq("student_id", student_id).execute()
+        stats["total_roadmaps"] = len(history.data) if history.data else 0
+
+        # Get quiz results
+        quizzes = client.table("student_quizzes").select("*").eq("student_id", student_id).order("created_at", desc=True).limit(20).execute()
+        stats["quiz_results"] = quizzes.data or []
+        stats["total_quizzes"] = len(quizzes.data) if quizzes.data else 0
+
+        # Get project count
+        projects = client.table("student_projects").select("id").eq("student_id", student_id).execute()
+        stats["total_projects"] = len(projects.data) if projects.data else 0
+
+    except Exception as e:
+        logger.error(f"Failed to get student stats: {e}")
+
+    return stats

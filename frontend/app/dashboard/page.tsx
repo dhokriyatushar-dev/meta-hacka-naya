@@ -6,7 +6,7 @@ import Link from "next/link";
 import { apiGet, apiPost } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
-type Tab = "roadmap" | "quizzes" | "badges" | "career";
+type Tab = "roadmap" | "quizzes" | "badges" | "career" | "profile";
 
 interface StudentData {
   name: string;
@@ -19,6 +19,7 @@ interface StudentData {
   job_readiness_score: number;
   weekly_hours: number;
   quiz_streak: number;
+  topics_studied: string[];
 }
 
 export default function DashboardPage() {
@@ -36,11 +37,20 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Profile state
+  const [profileData, setProfileData] = useState<any>(null);
+  const [roadmapHistory, setRoadmapHistory] = useState<any[]>([]);
+  const [progressData, setProgressData] = useState<any>(null);
+
   // Project submission state
   const [projectModal, setProjectModal] = useState<any>(null);
   const [projectSubmission, setProjectSubmission] = useState("");
   const [projectReport, setProjectReport] = useState<any>(null);
   const [submittingProject, setSubmittingProject] = useState(false);
+
+  // Quit roadmap confirmation
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     // Check Supabase auth first
@@ -92,6 +102,25 @@ export default function DashboardPage() {
     } catch {
       // No cached roadmap
     }
+  };
+
+  const handleQuitRoadmap = async () => {
+    setArchiving(true);
+    try {
+      await apiPost("/api/roadmap/archive", { student_id: studentId });
+      setRoadmap(null);
+      setShowQuitConfirm(false);
+      // Refresh student data to get updated completed_topics
+      loadStudentData(studentId);
+    } catch (err: any) {
+      setError(err.message || "Failed to archive roadmap");
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleEditRoadmap = () => {
+    router.push("/onboarding?edit=true");
   };
 
   const generateQuiz = async (topicId: string) => {
@@ -150,6 +179,21 @@ export default function DashboardPage() {
     }
   };
 
+  const loadProfile = async () => {
+    try {
+      const [profile, history, progress] = await Promise.all([
+        apiGet(`/api/profile/${studentId}`),
+        apiGet(`/api/profile/${studentId}/history`),
+        apiGet(`/api/profile/${studentId}/progress`),
+      ]);
+      setProfileData(profile);
+      setRoadmapHistory(history?.history || []);
+      setProgressData(progress);
+    } catch (err) {
+      console.error("Failed to load profile data");
+    }
+  };
+
   const submitProject = async () => {
     if (!projectModal || !projectSubmission.trim()) return;
     setSubmittingProject(true);
@@ -176,6 +220,7 @@ export default function DashboardPage() {
     if (activeTab === "roadmap") loadRoadmap();
     if (activeTab === "badges") loadBadges();
     if (activeTab === "career") loadCareer();
+    if (activeTab === "profile") loadProfile();
   }, [activeTab, studentId]);
 
   // Helper: Convert a skill name to a URL-safe topic ID
@@ -189,6 +234,7 @@ export default function DashboardPage() {
     { id: "quizzes", icon: "📝", label: "Quizzes" },
     { id: "badges", icon: "🏆", label: "Badges" },
     { id: "career", icon: "💼", label: "Career" },
+    { id: "profile", icon: "👤", label: "Profile" },
   ];
 
   if (!studentId) {
@@ -250,6 +296,31 @@ export default function DashboardPage() {
           <div className="mb-4 px-4 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "var(--accent-red)" }}>
             {error}
             <button onClick={() => setError("")} className="ml-4 font-bold">×</button>
+          </div>
+        )}
+
+        {/* ══════ QUIT ROADMAP CONFIRMATION MODAL ══════ */}
+        {showQuitConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.7)" }}>
+            <div className="glass-card p-8 max-w-md w-full mx-4 text-center">
+              <div className="text-4xl mb-4">⚠️</div>
+              <h2 className="text-xl font-bold mb-2">Quit Current Roadmap?</h2>
+              <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
+                Your progress will be saved to your profile history. You can start a new roadmap anytime.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => setShowQuitConfirm(false)}
+                  className="px-6 py-2 rounded-lg text-sm font-bold"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                  Cancel
+                </button>
+                <button onClick={handleQuitRoadmap} disabled={archiving}
+                  className="px-6 py-2 rounded-lg text-sm font-bold"
+                  style={{ background: "rgba(239,68,68,0.2)", color: "var(--accent-red)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                  {archiving ? "Archiving..." : "🚪 Quit & Archive"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -402,18 +473,70 @@ export default function DashboardPage() {
                 <h1 className="text-2xl font-bold">🗺️ Your Learning Roadmap</h1>
                 <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Personalized path generated by AI</p>
               </div>
-              <button onClick={generateRoadmap} disabled={loading} className="glow-btn !text-sm disabled:opacity-50">
-                {loading ? "Generating..." : roadmap ? "🔄 Regenerate" : "✨ Generate Roadmap"}
-              </button>
+              <div className="flex items-center gap-3">
+                {roadmap && (
+                  <>
+                    <button onClick={handleEditRoadmap}
+                      className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all hover:scale-105"
+                      style={{ background: "rgba(139,92,246,0.15)", color: "var(--accent-purple)", border: "1px solid rgba(139,92,246,0.3)" }}>
+                      ✏️ Edit Roadmap
+                    </button>
+                    <button onClick={() => setShowQuitConfirm(true)}
+                      className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all hover:scale-105"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "var(--accent-red)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                      🚪 Quit Roadmap
+                    </button>
+                  </>
+                )}
+                <button onClick={generateRoadmap} disabled={loading} className="glow-btn !text-sm disabled:opacity-50">
+                  {loading ? "Generating..." : roadmap ? "🔄 Regenerate" : "✨ Generate Roadmap"}
+                </button>
+              </div>
             </div>
+
+            {/* Roadmap progress banner */}
+            {roadmap?.weeks && student && (
+              <div className="glass-card p-4 mb-6 flex items-center gap-6" style={{ border: "1px solid rgba(79,110,247,0.3)" }}>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold">Roadmap Progress</span>
+                    <span className="text-sm font-bold gradient-text">
+                      {Math.round(((student.completed_topics?.length || 0) / Math.max(roadmap.weeks.length, 1)) * 100)}%
+                    </span>
+                  </div>
+                  <div className="progress-bar h-2.5">
+                    <div className="progress-fill" style={{ width: `${((student.completed_topics?.length || 0) / Math.max(roadmap.weeks.length, 1)) * 100}%` }} />
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
+                    {student.completed_topics?.length || 0} of {roadmap.weeks.length} topics completed
+                  </div>
+                </div>
+                <div className="text-center px-4" style={{ borderLeft: "1px solid var(--border)" }}>
+                  <div className="text-2xl font-bold gradient-text">🔥 {student.quiz_streak || 0}</div>
+                  <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Streak</div>
+                </div>
+              </div>
+            )}
 
             {roadmap?.weeks ? (
               <div>
                 <div className="space-y-4">
                   {roadmap.weeks.map((week: any, i: number) => {
                     const topicId = getTopicIdForWeek(week);
+                    const isCompleted = student?.completed_topics?.some(t =>
+                      t.toLowerCase().replace(/\s+/g, '_') === decodeURIComponent(topicId).toLowerCase()
+                    );
                     return (
-                      <div key={i} className="glass-card p-6" style={{ animationDelay: `${i * 0.05}s` }}>
+                      <div key={i} className="glass-card p-6 relative" style={{
+                        animationDelay: `${i * 0.05}s`,
+                        borderColor: isCompleted ? "rgba(34,197,94,0.4)" : undefined,
+                      }}>
+                        {isCompleted && (
+                          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                            style={{ background: "rgba(34,197,94,0.2)", color: "var(--accent-green)" }}>
+                            ✓ Completed
+                          </div>
+                        )}
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
@@ -751,6 +874,179 @@ export default function DashboardPage() {
                       <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)" }}>{event.url}</p>
                     </a>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ PROFILE TAB ═══ */}
+        {activeTab === "profile" && (
+          <div>
+            <h1 className="text-2xl font-bold mb-6">👤 Your Profile</h1>
+
+            {/* Profile Overview */}
+            {student && (
+              <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="glass-card p-6 md:col-span-2">
+                  <h3 className="font-bold mb-4">📋 Student Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Name</div>
+                      <div className="font-bold">{student.name || "—"}</div>
+                    </div>
+                    <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Field</div>
+                      <div className="font-bold">{student.target_field?.toUpperCase() || "—"}</div>
+                    </div>
+                    <div className="p-3 rounded-lg col-span-2" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Learning Goal</div>
+                      <div className="font-bold">{student.learning_goal || "—"}</div>
+                    </div>
+                    <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Weekly Hours</div>
+                      <div className="font-bold">{student.weekly_hours}h / week</div>
+                    </div>
+                    <div className="p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Quiz Streak</div>
+                      <div className="font-bold">🔥 {student.quiz_streak || 0}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-6">
+                  <h3 className="font-bold mb-4">📊 Stats</h3>
+                  <div className="space-y-4">
+                    <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-3xl font-bold gradient-text">{student.completed_topics?.length || 0}</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Topics Completed</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-3xl font-bold gradient-text">{profileData?.stats?.total_quizzes || 0}</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Quizzes Taken</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-3xl font-bold gradient-text">{profileData?.stats?.total_projects || 0}</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Projects Submitted</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                      <div className="text-3xl font-bold gradient-text">{Math.round((student.job_readiness_score || 0) * 100)}%</div>
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>Job Readiness</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Topics Covered */}
+            {student?.completed_topics && student.completed_topics.length > 0 && (
+              <div className="glass-card p-6 mb-8">
+                <h3 className="font-bold mb-4">✅ Topics You&apos;ve Covered</h3>
+                <div className="flex flex-wrap gap-2">
+                  {student.completed_topics.map((topic, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                      style={{ background: "rgba(34,197,94,0.15)", color: "var(--accent-green)", border: "1px solid rgba(34,197,94,0.3)" }}>
+                      ✓ {topic.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Topics Studied (clicked but not completed) */}
+            {student?.topics_studied && student.topics_studied.length > 0 && (
+              <div className="glass-card p-6 mb-8">
+                <h3 className="font-bold mb-4">📚 Topics Studied</h3>
+                <div className="flex flex-wrap gap-2">
+                  {student.topics_studied.map((topic, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                      style={{ background: "rgba(79,110,247,0.15)", color: "var(--accent-blue)", border: "1px solid rgba(79,110,247,0.3)" }}>
+                      📖 {topic.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Roadmap History */}
+            <div className="glass-card p-6 mb-8">
+              <h3 className="font-bold mb-4">📜 Roadmap History</h3>
+              {roadmapHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {roadmapHistory.map((entry, i) => {
+                    const rmData = entry.roadmap_data;
+                    const title = rmData?.title || rmData?.weeks?.[0]?.title || "Learning Roadmap";
+                    const totalWeeks = rmData?.weeks?.length || 0;
+                    return (
+                      <div key={i} className="p-4 rounded-xl" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="text-sm font-bold">{title}</h4>
+                            <p className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
+                              {totalWeeks} weeks • Archived {entry.archived_at ? new Date(entry.archived_at).toLocaleDateString() : ""}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold" style={{
+                              color: (entry.completion_percentage || 0) >= 80 ? "var(--accent-green)"
+                                : (entry.completion_percentage || 0) >= 40 ? "var(--accent-amber)"
+                                : "var(--accent-red)"
+                            }}>
+                              {Math.round(entry.completion_percentage || 0)}%
+                            </div>
+                            <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>completed</div>
+                          </div>
+                        </div>
+                        <div className="progress-bar h-1.5">
+                          <div className="progress-fill" style={{ width: `${entry.completion_percentage || 0}%` }} />
+                        </div>
+                        {entry.topics_covered && entry.topics_covered.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {entry.topics_covered.slice(0, 6).map((t: string, j: number) => (
+                              <span key={j} className="px-2 py-0.5 rounded text-[9px]" style={{ background: "rgba(139,92,246,0.1)", color: "var(--accent-purple)" }}>
+                                {t.replace(/_/g, " ")}
+                              </span>
+                            ))}
+                            {entry.topics_covered.length > 6 && (
+                              <span className="px-2 py-0.5 rounded text-[9px]" style={{ color: "var(--text-secondary)" }}>
+                                +{entry.topics_covered.length - 6} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-3xl mb-2 opacity-50">📜</div>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>No previous roadmaps yet. Complete or quit a roadmap to see it here.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Current Progress */}
+            {progressData?.current && (
+              <div className="glass-card p-6">
+                <h3 className="font-bold mb-4">📈 Current Progress</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                    <div className="text-2xl font-bold gradient-text">{progressData.current.topics_completed?.length || 0}</div>
+                    <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Topics Done</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                    <div className="text-2xl font-bold gradient-text">{progressData.current.topics_studied?.length || 0}</div>
+                    <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Topics Studied</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                    <div className="text-2xl font-bold gradient-text">🔥 {progressData.current.quiz_streak || 0}</div>
+                    <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Quiz Streak</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg" style={{ background: "var(--bg-primary)" }}>
+                    <div className="text-2xl font-bold gradient-text">{progressData.current.badges_earned || 0}</div>
+                    <div className="text-[10px]" style={{ color: "var(--text-secondary)" }}>Badges</div>
+                  </div>
                 </div>
               </div>
             )}

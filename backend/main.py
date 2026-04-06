@@ -17,6 +17,7 @@ from api.badges import router as badges_router
 from api.career import router as career_router
 from api.resources import router as resources_router
 from api.projects import router as projects_router
+from api.profile import router as profile_router
 from environment.curriculum import TOPIC_GRAPH, PROJECT_DB
 from environment.env import EduPathEnv
 from environment.models import Action, ActionType, QuizDifficulty
@@ -51,6 +52,7 @@ app.include_router(badges_router)
 app.include_router(career_router)
 app.include_router(resources_router)
 app.include_router(projects_router)
+app.include_router(profile_router)
 
 
 # ═══ OpenEnv Session Management ═══
@@ -215,10 +217,17 @@ async def env_grade(request: GradeRequest):
         return {"error": "Student not found.", "score": 0.0}
 
     graders = {
-        "task1_easy": grade_task1,
-        "task2_medium": grade_task2,
-        "task3_hard": grade_task3,
+        "task1_easy": lambda s: grade_task1(s),
+        "task2_medium": lambda s: grade_task2(s),
+        "task3_hard": lambda s: grade_task3(s),
     }
+    # Import task4/task5 graders
+    try:
+        from environment.graders import grade_task4, grade_task5
+        graders["task4_team"] = lambda s: grade_task4([s], steps_used=env.total_steps)
+        graders["task5_deadline"] = lambda s: grade_task5(s, steps_used=env.total_steps)
+    except ImportError:
+        pass
     grader = graders.get(request.task_id)
     if not grader:
         return {"error": f"Unknown task: {request.task_id}", "score": 0.0}

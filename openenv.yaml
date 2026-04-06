@@ -14,7 +14,7 @@ environment:
   class_name: "EduPathEnv"
 
   observation:
-    type: "StudentObservation"
+    type: "Observation"
     fields:
       - student_id
       - target_field
@@ -22,12 +22,14 @@ environment:
       - completed_topics
       - available_topics
       - current_topic
+      - skill_levels
       - quiz_history_summary
       - completed_projects
-      - badges
       - job_readiness_score
-      - clicked_resource_links
-      - topics_studied
+      - total_steps
+      - badges_earned
+      - weekly_hours
+      - mastery_probabilities
 
   action:
     type: "Action"
@@ -66,6 +68,12 @@ tasks:
   - path: "tasks/task3_hard.yaml"
     difficulty: hard
     description: "Cross-domain doctor-to-AI roadmap"
+  - path: "tasks/task4_team.yaml"
+    difficulty: hard
+    description: "Team learning — 3 cross-domain employees to job readiness"
+  - path: "tasks/task5_deadline.yaml"
+    difficulty: expert
+    description: "Career transition under 8-week deadline with milestones"
 
 inference:
   entrypoint: "inference.py"

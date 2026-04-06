@@ -1,6 +1,6 @@
 """
 EduPath AI — Task Graders
-Deterministic graders for Task 1 (Easy), Task 2 (Medium), Task 3 (Hard).
+Deterministic graders for Task 1-5.
 Each grader scores 0.0 to 1.0.
 Graders accept a StudentProfile and evaluate the final state.
 """
@@ -111,4 +111,113 @@ def grade_task3(student: StudentProfile) -> float:
         cross_domain = 0.3
 
     final = (job_readiness * 0.4) + (efficiency * 0.3) + (cross_domain * 0.3)
+    return round(min(final, 1.0), 4)
+
+
+def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
+    """
+    Task 4 (Hard): Team Learning — 3 employees with different backgrounds.
+    Grader: min readiness (30%) + avg readiness (20%) + efficiency (20%) +
+            cross-domain bridging (15%) + all-complete bonus (15%).
+    """
+    if not students:
+        return 0.0
+
+    # 1. Min job readiness across all students (30%) — weakest link
+    readiness_scores = [s.job_readiness_score for s in students]
+    min_readiness = min(readiness_scores) if readiness_scores else 0.0
+
+    # 2. Average job readiness (20%)
+    avg_readiness = sum(readiness_scores) / len(readiness_scores) if readiness_scores else 0.0
+
+    # 3. Efficiency (20%): 1 - steps_used/300
+    efficiency = max(0, 1.0 - steps_used / 300.0)
+
+    # 4. Cross-domain bridging quality (15%): count unique cross-domain topics
+    cross_domain_topics = set()
+    for student in students:
+        target = student.target_field or "tech"
+        for topic_id in student.completed_topics:
+            topic = TOPIC_GRAPH.get(topic_id)
+            if topic and topic.field != target and topic.field != "tech":
+                cross_domain_topics.add(topic_id)
+            # Also count tech topics for non-tech students as cross-domain
+            elif topic and topic.field == "tech" and target != "tech":
+                cross_domain_topics.add(topic_id)
+    cross_domain_score = min(len(cross_domain_topics) / 9.0, 1.0)
+
+    # 5. Binary completion bonus (15%): all 3 students reach 0.7 readiness
+    all_complete = 1.0 if all(r >= 0.7 for r in readiness_scores) else 0.0
+
+    final = (
+        min_readiness * 0.30 +
+        avg_readiness * 0.20 +
+        efficiency * 0.20 +
+        cross_domain_score * 0.15 +
+        all_complete * 0.15
+    )
+    return round(min(final, 1.0), 4)
+
+
+def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
+    """
+    Task 5 (Expert): Career Transition Under Deadline.
+    Nurse → Healthcare AI Product Manager in 8 weeks (56 hours).
+    Grader: job readiness (25%) + milestone completion (25%) +
+            skill coverage (20%) + efficiency (20%) + early completion (10%).
+    """
+    # 1. Job readiness at episode end (25%)
+    job_readiness = student.job_readiness_score
+
+    # 2. Milestone completion rate (25%) — check 4 milestones
+    milestones_hit = 0
+    total_milestones = 4
+
+    # Milestone 1 (week 2): >= 3 topics completed
+    if len(student.completed_topics) >= 3:
+        milestones_hit += 1
+
+    # Milestone 2 (week 4): quiz passed on statistics and data_analysis
+    quiz_passed_topics = {q.topic_id for q in student.quiz_history if q.passed}
+    if "statistics" in quiz_passed_topics or "data_analysis" in quiz_passed_topics:
+        milestones_hit += 1
+
+    # Milestone 3 (week 6): >= 1 project completed
+    if len(student.completed_projects) >= 1:
+        milestones_hit += 1
+
+    # Milestone 4 (week 8): job readiness >= 0.7
+    if student.job_readiness_score >= 0.7:
+        milestones_hit += 1
+
+    milestone_rate = milestones_hit / total_milestones
+
+    # 3. Skill coverage (20%): healthcare + tech + business all > 0.5 mastery
+    fields_covered = set()
+    for topic_id in student.completed_topics:
+        topic = TOPIC_GRAPH.get(topic_id)
+        if topic:
+            fields_covered.add(topic.field)
+    # Need healthcare, tech, and business
+    required_fields = {"healthcare", "tech", "business"}
+    coverage = len(fields_covered.intersection(required_fields)) / len(required_fields)
+
+    # 4. Efficiency (20%): topics per step vs optimal (1 topic per 5 steps)
+    if steps_used > 0:
+        topics_per_step = len(student.completed_topics) / steps_used
+        optimal_rate = 1.0 / 5.0  # 1 topic per 5 steps is optimal
+        efficiency = min(topics_per_step / optimal_rate, 1.0)
+    else:
+        efficiency = 0.0
+
+    # 5. Early completion bonus (10%): job_ready triggered before step 80
+    early_bonus = 1.0 if (student.job_readiness_score >= 0.7 and steps_used < 80) else 0.0
+
+    final = (
+        job_readiness * 0.25 +
+        milestone_rate * 0.25 +
+        coverage * 0.20 +
+        efficiency * 0.20 +
+        early_bonus * 0.10
+    )
     return round(min(final, 1.0), 4)

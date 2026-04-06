@@ -60,7 +60,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     """Emit [END] structured log to stdout."""
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     success_val = str(success).lower()
-    print(f"[END] success={success_val} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+    print(f"[END] success={success_val} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -445,6 +445,10 @@ def get_agent_decision(observation: dict, mode: str = "react", agent=None) -> di
         return agent.decide(observation)
     elif mode == "react" and agent:
         return agent.decide(observation)
+    elif mode == "hrl" and agent:
+        return agent.decide(observation)
+    elif mode == "reflexion" and agent:
+        return agent.decide(observation)
     else:
         return _rule_based_decision(observation)
 
@@ -562,14 +566,16 @@ class EnvDirectClient:
 
     def grade(self, task_id: str) -> float:
         """Grade using direct grader import."""
-        from environment.graders import grade_task1, grade_task2, grade_task3
+        from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
         student = self.student_manager.get(self._current_student_id)
         if not student:
             return 0.0
         graders = {
-            "task1_easy": grade_task1,
-            "task2_medium": grade_task2,
-            "task3_hard": grade_task3,
+            "task1_easy": lambda s: grade_task1(s),
+            "task2_medium": lambda s: grade_task2(s),
+            "task3_hard": lambda s: grade_task3(s),
+            "task4_team": lambda s: grade_task4([s], steps_used=self.env.total_steps if self.env else 100),
+            "task5_deadline": lambda s: grade_task5(s, steps_used=self.env.total_steps if self.env else 100),
         }
         grader = graders.get(task_id)
         return grader(student) if grader else 0.0
@@ -621,19 +627,48 @@ TASK_PROFILES = {
         ],
         "resume_skills": ["medicine", "clinical research", "biology"],
     },
+    "task4_team": {
+        "name": "Sam Engineer",
+        "target_field": "business",
+        "learning_goal": "Cross-train from tech into business strategy",
+        "weekly_hours": 10,
+        "skills": [
+            {"skill": "Python", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Data Structures", "level": "Intermediate", "proficiency": 0.6},
+        ],
+        "resume_skills": ["python", "data_structures", "web_development"],
+    },
+    "task5_deadline": {
+        "name": "Nurse Taylor",
+        "target_field": "healthcare",
+        "learning_goal": "Healthcare AI Product Manager",
+        "weekly_hours": 7,
+        "skills": [
+            {"skill": "Biology", "level": "Expert", "proficiency": 0.85},
+            {"skill": "Healthcare", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Statistics", "level": "Basic", "proficiency": 0.2},
+        ],
+        "resume_skills": ["nursing", "healthcare", "biology"],
+    },
 }
 
 TASK_MAX_STEPS = {
     "task1_easy": 30,
     "task2_medium": 50,
     "task3_hard": 80,
+    "task4_team": 100,
+    "task5_deadline": 100,
 }
 
 
-def run_task(task_id: str, client, mode: str = "react") -> float:
+def run_task(task_id: str, client, mode: str = "react", episodes: int = 1) -> float:
     """Run a task episode and return graded score."""
     profile = TASK_PROFILES[task_id]
     max_steps = TASK_MAX_STEPS[task_id]
+
+    # Reflexion mode: run multiple episodes with reflection between them
+    if mode == "reflexion":
+        return _run_reflexion_task(task_id, client, profile, max_steps, episodes)
 
     # Reset environment
     reset_result = client.reset(student_profile=profile, seed=SEED)
@@ -651,59 +686,154 @@ def run_task(task_id: str, client, mode: str = "react") -> float:
             logger.warning(f"PPO model not found for {task_id}, falling back to rule-based")
             mode = "rule"
             agent = None
+    elif mode == "hrl":
+        agent = _HRLInferenceAgent(task_id)
 
     # Emit [START]
-    model_label = f"{MODEL_NAME}(ReAct)" if mode == "react" else (
-        "PPO-MlpPolicy" if mode == "ppo" else f"{MODEL_NAME}(Rule)")
-    log_start(task=task_id, env="edupath-ai", model=model_label)
+    model_labels = {
+        "react": f"{MODEL_NAME}(ReAct)",
+        "ppo": "PPO-MlpPolicy",
+        "hrl": "HRL-Manager+Worker",
+        "rule": f"{MODEL_NAME}(Rule)",
+    }
+    log_start(task=task_id, env="edupath-ai", model=model_labels.get(mode, mode))
 
     rewards_list: List[float] = []
     step_count = 0
+    score = 0.0
+    success = False
 
-    for step in range(max_steps):
-        # Agent decides action
-        action = get_agent_decision(observation, mode=mode, agent=agent)
-        step_count = step + 1
+    try:
+        for step in range(max_steps):
+            # Agent decides action
+            action = get_agent_decision(observation, mode=mode, agent=agent)
+            step_count = step + 1
 
-        # Execute action via environment
-        result = client.step(action)
+            # Execute action via environment
+            result = client.step(action)
 
-        reward_val = result.get("reward", {}).get("value", 0.0)
-        done = result.get("done", False)
+            reward_val = result.get("reward", {}).get("value", 0.0)
+            done = result.get("done", False)
 
-        rewards_list.append(reward_val)
+            rewards_list.append(reward_val)
 
-        # Build action string representation for logs
-        action_str = f"{action.get('type')}('{action.get('topic_id', '')}')"
+            # Build action string representation for logs
+            action_str = f"{action.get('type')}('{action.get('topic_id', '')}')"
 
-        # Record in scratchpad if using ReAct
-        if mode == "react" and agent:
-            thought = action.get("_thought", "")
-            new_observation = result.get("observation", observation)
-            agent.record(action, reward_val, new_observation, thought)
+            # Record in scratchpad if using ReAct
+            if mode == "react" and agent:
+                thought = action.get("_thought", "")
+                new_observation = result.get("observation", observation)
+                agent.record(action, reward_val, new_observation, thought)
 
-        # Emit [STEP]
-        log_step(
-            step=step_count,
-            action=action_str,
-            reward=reward_val,
-            done=done,
-            error=None
-        )
+            # Emit [STEP]
+            log_step(
+                step=step_count,
+                action=action_str,
+                reward=reward_val,
+                done=done,
+                error=None
+            )
 
-        observation = result.get("observation", observation)
+            observation = result.get("observation", observation)
 
-        if done:
-            break
+            if done:
+                break
 
-    # Grade the task via /grade endpoint (works both HTTP and direct)
-    score = client.grade(task_id)
-    success = score >= 0.8  # Threshold
-
-    # Emit [END]
-    log_end(success=success, steps=step_count, score=score, rewards=rewards_list)
+        # Grade the task
+        score = client.grade(task_id)
+        success = score >= 0.8
+    finally:
+        # Always emit [END] even if an exception occurs
+        log_end(success=success, steps=step_count, score=score, rewards=rewards_list)
 
     return score
+
+
+def _run_reflexion_task(task_id: str, client, profile: dict,
+                        max_steps: int, episodes: int = 3) -> float:
+    """Run multiple episodes with Reflexion agent."""
+    from ai.reflexion_agent import ReflexionAgent
+
+    agent = ReflexionAgent(max_reflections=5)
+    best_score = 0.0
+
+    for ep in range(episodes):
+        agent.new_episode()
+        reset_result = client.reset(student_profile=profile, seed=SEED + ep)
+        observation = reset_result["observation"]
+
+        model_label = f"Reflexion(ep={ep+1}/{episodes})"
+        log_start(task=task_id, env="edupath-ai", model=model_label)
+
+        rewards_list = []
+        step_count = 0
+
+        for step in range(max_steps):
+            action = agent.decide(observation)
+            step_count = step + 1
+
+            result = client.step(action)
+            reward_val = result.get("reward", {}).get("value", 0.0)
+            done = result.get("done", False)
+            rewards_list.append(reward_val)
+
+            new_obs = result.get("observation", observation)
+            agent.record_step(action, reward_val, new_obs, done)
+
+            action_str = f"{action.get('type')}('{action.get('topic_id', '')}')"
+            log_step(step=step_count, action=action_str, reward=reward_val, done=done)
+
+            observation = new_obs
+            if done:
+                break
+
+        score = client.grade(task_id)
+        success = score >= 0.8
+        log_end(success=success, steps=step_count, score=score, rewards=rewards_list)
+
+        # Reflect on the episode
+        reflection = agent.reflect(final_score=score)
+        logger.info(f"  Reflexion ep{ep+1}: score={score:.4f} | {reflection[:100]}...")
+
+        if score > best_score:
+            best_score = score
+
+    # Save reflection memory
+    os.makedirs("results", exist_ok=True)
+    agent.memory.save(f"results/reflexion_memory_{task_id}.json")
+
+    return best_score
+
+
+class _HRLInferenceAgent:
+    """HRL agent for inference using trained model."""
+    def __init__(self, task_id: str):
+        self.model = None
+        self._env = None
+        try:
+            from stable_baselines3 import PPO
+            from environment.hierarchical_env import HierarchicalEduPathEnv
+            model_path = os.path.join("models", f"hrl_{task_id}")
+            if os.path.exists(model_path + ".zip"):
+                self.model = PPO.load(model_path)
+                self._env = HierarchicalEduPathEnv(task_id=task_id)
+                logger.info(f"Loaded HRL model from {model_path}")
+        except Exception as e:
+            logger.warning(f"HRL model not found: {e}")
+
+    def decide(self, observation: dict) -> dict:
+        if not self.model:
+            return _rule_based_decision(observation)
+        self._env._observation = observation
+        obs_array = self._env._encode_observation(observation)
+        action, _ = self.model.predict(obs_array, deterministic=True)
+        decoded = self._env._decode_action(int(action[0]))
+        return {
+            "type": decoded.type.value,
+            "topic_id": decoded.topic_id,
+            "project_id": decoded.project_id,
+        }
 
 
 # ═══════════════════════════════════════════════════════════
@@ -712,21 +842,25 @@ def run_task(task_id: str, client, mode: str = "react") -> float:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="EduPath AI Inference")
-    parser.add_argument("--task", type=str, choices=["task1_easy", "task2_medium", "task3_hard"],
+    parser.add_argument("--task", type=str,
+                        choices=["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"],
                         help="Run specific task")
-    parser.add_argument("--all", action="store_true", help="Run all 3 tasks and print scores")
+    parser.add_argument("--all", action="store_true", help="Run all tasks and print scores")
     parser.add_argument("--direct", action="store_true",
                         help="Use direct env import instead of HTTP client")
     parser.add_argument("--mode", type=str, default="react",
-                        choices=["react", "rule", "ppo"],
-                        help="Agent mode: react (default), rule (deterministic), ppo (trained)")
+                        choices=["react", "rule", "ppo", "reflexion", "hrl"],
+                        help="Agent mode: react, rule, ppo, reflexion, hrl")
+    parser.add_argument("--episodes", type=int, default=1,
+                        help="Number of episodes to run (reflexion uses multiple)")
     args = parser.parse_args()
 
     client = get_client(use_http=not args.direct)
 
     if args.all:
         scores = {}
-        for task_id in ["task1_easy", "task2_medium", "task3_hard"]:
+        all_tasks = ["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"]
+        for task_id in all_tasks:
             logger.info(f"\n{'#' * 60}")
             logger.info(f"  RUNNING {task_id.upper()} (mode={args.mode})")
             logger.info(f"{'#' * 60}")
@@ -749,7 +883,8 @@ if __name__ == "__main__":
     else:
         # Default: run all tasks
         scores = {}
-        for task_id in ["task1_easy", "task2_medium", "task3_hard"]:
+        all_tasks = ["task1_easy", "task2_medium", "task3_hard", "task4_team", "task5_deadline"]
+        for task_id in all_tasks:
             scores[task_id] = run_task(task_id, client, mode=args.mode)
 
         print(f"\n{'='*50}")

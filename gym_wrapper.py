@@ -56,6 +56,29 @@ TASK_PROFILES = {
         ],
         "resume_skills": ["medicine", "clinical research", "biology"],
     },
+    "task4_team": {
+        "name": "Sam Engineer",
+        "target_field": "business",
+        "learning_goal": "Cross-train from tech into business strategy",
+        "weekly_hours": 10,
+        "skills": [
+            {"skill": "Python", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Data Structures", "level": "Intermediate", "proficiency": 0.6},
+        ],
+        "resume_skills": ["python", "data_structures", "web_development"],
+    },
+    "task5_deadline": {
+        "name": "Nurse Taylor",
+        "target_field": "healthcare",
+        "learning_goal": "Healthcare AI Product Manager",
+        "weekly_hours": 7,
+        "skills": [
+            {"skill": "Biology", "level": "Expert", "proficiency": 0.85},
+            {"skill": "Healthcare", "level": "Advanced", "proficiency": 0.8},
+            {"skill": "Statistics", "level": "Basic", "proficiency": 0.2},
+        ],
+        "resume_skills": ["nursing", "healthcare", "biology"],
+    },
 }
 
 
@@ -119,9 +142,10 @@ class EduPathGymEnv(gymnasium.Env):
 
         return self._encode_observation(self._observation), {}
 
-    def step(self, action_int: int):
+    def step(self, action_int):
         """Execute action and return (obs, reward, terminated, truncated, info)."""
-        action = self._decode_action(action_int)
+        action_val = int(np.squeeze(action_int))
+        action = self._decode_action(action_val)
         result = self.env.step(action)
 
         self._observation = result.observation.model_dump()
@@ -242,19 +266,201 @@ def make_env(task_id: str = "task2_medium", seed: int = 42):
     return _init
 
 
+# ═══════════════════════════════════════════════════════════
+#  GNN Gym Wrapper — Graph-based observation + MultiDiscrete action
+# ═══════════════════════════════════════════════════════════
+
+class GNNGymWrapper(gymnasium.Env):
+    """
+    Gymnasium wrapper with GNN-compatible observations.
+
+    Observation: Dict with node_features, edge_index, scalar_features, topic_mask
+    Action: MultiDiscrete([7, num_topics]) — action type + topic jointly
+    """
+
+    metadata = {"render_modes": ["human"]}
+
+    def __init__(self, task_id: str = "task2_medium", seed: int = 42,
+                 use_curiosity: bool = False):
+        super().__init__()
+        self.task_id = task_id
+        self.seed_val = seed
+        self.use_curiosity = use_curiosity
+
+        # Import GNN components
+        from environment.gnn_policy import (
+            ALL_TOPIC_IDS, NUM_TOPICS, STATIC_EDGE_INDEX, TOPIC_TO_IDX,
+            build_node_features, build_scalar_features, build_topic_mask
+        )
+        self._all_topic_ids = ALL_TOPIC_IDS
+        self._num_topics = NUM_TOPICS
+        self._static_edge_index = STATIC_EDGE_INDEX
+        self._topic_to_idx = TOPIC_TO_IDX
+        self._build_node_features = build_node_features
+        self._build_scalar_features = build_scalar_features
+        self._build_topic_mask = build_topic_mask
+
+        # Action space: [action_type (7), topic_index (num_topics)]
+        self.action_space = spaces.MultiDiscrete([7, self._num_topics])
+
+        # Observation space: flattened for SB3 compatibility
+        # node_features (num_topics * 9) + edge_index_flat (2 * num_edges) 
+        # + scalar_features (4) + topic_mask (num_topics)
+        # We flatten into a single Box for SB3 MlpPolicy compatibility
+        num_edges = self._static_edge_index.shape[1]
+        obs_dim = (self._num_topics * 9) + 4 + self._num_topics
+        self.observation_space = spaces.Box(
+            low=-1.0, high=2.0, shape=(obs_dim,), dtype=np.float32
+        )
+
+        self.env = None
+        self._student_id = None
+        self._observation = None
+
+        # ICM for curiosity-driven exploration
+        self._icm = None
+        if self.use_curiosity:
+            from environment.icm import IntrinsicCuriosityModule
+            self._icm = IntrinsicCuriosityModule()
+
+    def reset(self, seed=None, options=None):
+        """Reset environment and return GNN observation."""
+        if seed is not None:
+            self.seed_val = seed
+
+        self.env = EduPathEnv(seed=self.seed_val)
+        profile = TASK_PROFILES[self.task_id]
+
+        student = student_manager.create(name=profile.get("name", "GNN Agent"))
+        student_manager.update_from_onboarding(student.id, profile)
+        self._student_id = student.id
+
+        obs_pydantic = self.env.reset(student_id=self._student_id, seed=self.seed_val)
+        self._observation = obs_pydantic.model_dump()
+
+        if self._icm:
+            self._icm.new_episode()
+
+        return self._encode_gnn_observation(self._observation), {}
+
+    def step(self, action):
+        """Execute MultiDiscrete action [action_type, topic_idx]."""
+        action_type_idx = int(action[0])
+        topic_idx = int(action[1])
+
+        # Decode action
+        pydantic_action = self._decode_gnn_action(action_type_idx, topic_idx)
+        result = self.env.step(pydantic_action)
+
+        self._observation = result.observation.model_dump()
+        extrinsic_reward = result.reward.value
+
+        # Add curiosity bonus if enabled
+        intrinsic_reward = 0.0
+        if self._icm:
+            topic_id = pydantic_action.topic_id or "none"
+            intrinsic_reward = self._icm.get_bonus(topic_id, pydantic_action.type.value)
+
+        total_reward = extrinsic_reward + intrinsic_reward
+
+        terminated = result.done and result.reward.is_terminal
+        truncated = result.done and not result.reward.is_terminal
+
+        info = result.info
+        info["reward_reason"] = result.reward.reason
+        info["extrinsic_reward"] = extrinsic_reward
+        info["intrinsic_reward"] = intrinsic_reward
+
+        obs_array = self._encode_gnn_observation(self._observation)
+        return obs_array, total_reward, terminated, truncated, info
+
+    def _encode_gnn_observation(self, obs: dict) -> np.ndarray:
+        """Encode observation as flattened GNN-compatible array."""
+        completed = obs.get("completed_topics", [])
+        available = obs.get("available_topics", [])
+        mastery = obs.get("mastery_probabilities", {})
+
+        # Node features (num_topics * 8)
+        node_feat = self._build_node_features(completed, available, mastery)
+        node_flat = node_feat.flatten()
+
+        # Scalar features (4)
+        scalar_feat = self._build_scalar_features(
+            obs.get("job_readiness_score", 0.0),
+            obs.get("badges_earned", 0),
+            obs.get("total_steps", 0),
+            obs.get("weekly_hours", 10),
+        )
+
+        # Topic mask (num_topics)
+        topic_mask = self._build_topic_mask(completed, available)
+
+        # Concatenate all
+        return np.concatenate([node_flat, scalar_feat, topic_mask]).astype(np.float32)
+
+    def _decode_gnn_action(self, action_type_idx: int, topic_idx: int) -> Action:
+        """Decode MultiDiscrete action into Action pydantic model."""
+        action_type = ACTION_TYPE_MAP.get(action_type_idx, ActionType.RECOMMEND_TOPIC)
+
+        # Get topic_id from index
+        topic_id = None
+        if 0 <= topic_idx < len(self._all_topic_ids):
+            topic_id = self._all_topic_ids[topic_idx]
+
+        # For actions that don't need a topic
+        if action_type in (ActionType.SUGGEST_EVENT, ActionType.MARK_JOB_READY):
+            topic_id = None
+
+        return Action(
+            type=action_type,
+            topic_id=topic_id,
+        )
+
+    def render(self, mode="human"):
+        if self._observation:
+            print(f"Step {self._observation.get('total_steps', '?')}: "
+                  f"Completed={len(self._observation.get('completed_topics', []))} "
+                  f"Available={len(self._observation.get('available_topics', []))} "
+                  f"JR={self._observation.get('job_readiness_score', 0):.2f}")
+
+
+def make_gnn_env(task_id: str = "task2_medium", seed: int = 42,
+                 use_curiosity: bool = False):
+    """Factory function for GNN environment."""
+    def _init():
+        return GNNGymWrapper(task_id=task_id, seed=seed, use_curiosity=use_curiosity)
+    return _init
+
+
 if __name__ == "__main__":
-    # Quick test
+    # Quick test - standard wrapper
     env = EduPathGymEnv(task_id="task1_easy")
     obs, info = env.reset()
-    print(f"Observation shape: {obs.shape}")
-    print(f"Observation: {obs}")
+    print(f"Standard obs shape: {obs.shape}")
 
-    for i in range(10):
+    for i in range(5):
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        print(f"Step {i+1}: action={action}, reward={reward:.2f}, "
-              f"terminated={terminated}, truncated={truncated}")
+        print(f"Step {i+1}: action={action}, reward={reward:.2f}")
         if terminated or truncated:
             break
 
-    print("Gym wrapper test passed!")
+    print("Standard gym wrapper test passed!")
+
+    # Quick test - GNN wrapper
+    try:
+        gnn_env = GNNGymWrapper(task_id="task1_easy")
+        obs, info = gnn_env.reset()
+        print(f"\nGNN obs shape: {obs.shape}")
+
+        for i in range(5):
+            action = gnn_env.action_space.sample()
+            obs, reward, terminated, truncated, info = gnn_env.step(action)
+            print(f"Step {i+1}: action={action}, reward={reward:.2f}")
+            if terminated or truncated:
+                break
+
+        print("GNN gym wrapper test passed!")
+    except ImportError as e:
+        print(f"GNN wrapper not available: {e}")
+

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { apiPost } from "@/lib/api";
+import { Suspense } from "react";
+import { apiGet, apiPost } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
 const STEPS = [
@@ -19,8 +20,10 @@ interface Skill {
   proficiency: number;
 }
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("edit") === "true";
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,18 +41,41 @@ export default function OnboardingPage() {
   const [weeklyHours, setWeeklyHours] = useState(10);
   const [learningGoal, setLearningGoal] = useState("");
 
-  // Check auth on mount
+  // Check auth on mount and load existing profile if edit mode
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         router.push("/auth");
         return;
       }
-      setUserId(session.user.id);
+      const uid = session.user.id;
+      setUserId(uid);
       setEmail(session.user.email || "");
       setName(session.user.user_metadata?.full_name || "");
+
+      // In edit mode, pre-fill with existing profile data
+      if (isEditMode) {
+        try {
+          const profile = await apiGet(`/api/onboarding/profile/${uid}`);
+          if (profile) {
+            setName(profile.name || session.user.user_metadata?.full_name || "");
+            setTargetField(profile.target_field || "");
+            setWeeklyHours(profile.weekly_hours || 10);
+            setLearningGoal(profile.learning_goal || "");
+            if (profile.self_assessed_skills) {
+              setSkills(profile.self_assessed_skills.map((s: any) => ({
+                skill: s.skill || s,
+                level: s.level || "Beginner",
+                proficiency: s.proficiency || 0.3,
+              })));
+            }
+          }
+        } catch {
+          // Profile might not exist yet, that's fine
+        }
+      }
     });
-  }, [router]);
+  }, [router, isEditMode]);
 
   const addSkill = () => {
     if (skillInput && !skills.find(s => s.skill === skillInput)) {
@@ -77,6 +103,15 @@ export default function OnboardingPage() {
       // Store student_id (now the Supabase user UUID)
       localStorage.setItem("edupath_student_id", result.student_id);
       localStorage.setItem("edupath_student_name", name);
+
+      if (isEditMode) {
+        // Force regenerate roadmap after edit
+        try {
+          await apiPost("/api/roadmap/generate", { student_id: result.student_id, force_regenerate: true });
+        } catch {
+          // Roadmap generation is secondary, don't block
+        }
+      }
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
@@ -99,9 +134,19 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg-primary)" }}>
       <div className="w-full max-w-2xl">
         {/* Back link */}
-        <Link href="/" className="inline-flex items-center gap-2 mb-8 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
-          ← Back to Home
+        <Link href={isEditMode ? "/dashboard" : "/"} className="inline-flex items-center gap-2 mb-8 text-sm transition-colors" style={{ color: "var(--text-secondary)" }}>
+          ← {isEditMode ? "Back to Dashboard" : "Back to Home"}
         </Link>
+
+        {isEditMode && (
+          <div className="mb-6 px-4 py-3 rounded-xl" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
+            <div className="flex items-center gap-2">
+              <span>✏️</span>
+              <span className="text-sm font-bold" style={{ color: "var(--accent-purple)" }}>Edit Mode</span>
+            </div>
+            <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>Update your preferences to regenerate your learning roadmap.</p>
+          </div>
+        )}
 
         {/* Step Indicator */}
         <div className="flex items-center gap-2 mb-8">
@@ -270,12 +315,24 @@ export default function OnboardingPage() {
             ) : (
               <button onClick={handleSubmit} disabled={loading || !learningGoal}
                 className="glow-btn disabled:opacity-50">
-                {loading ? "Creating Your Path..." : "🚀 Generate My Roadmap"}
+                {loading ? (isEditMode ? "Updating..." : "Creating Your Path...") : isEditMode ? "✏️ Update & Regenerate Roadmap" : "🚀 Generate My Roadmap"}
               </button>
             )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}>
+        <div className="text-lg" style={{ color: "var(--text-secondary)" }}>Loading...</div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   );
 }

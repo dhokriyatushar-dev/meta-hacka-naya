@@ -12,7 +12,10 @@ COPY inference.py .
 COPY gym_wrapper.py .
 COPY train.py .
 COPY evaluate.py .
+COPY ablation.py .
+COPY hrl_train.py .
 COPY tasks/ ./tasks/
+COPY dashboard/ ./dashboard/
 COPY openenv.yaml .
 COPY README.md .
 # Copy trained models and results (create dirs if absent)
