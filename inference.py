@@ -491,7 +491,7 @@ class EnvHTTPClient:
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get("score", 0.0)
+        return data.get("score", 0.0001)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -567,7 +567,7 @@ class EnvDirectClient:
         from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
         student = self.student_manager.get(self._current_student_id)
         if not student:
-            return 0.0
+            return 0.0001
         graders = {
             "task1_easy": lambda s: grade_task1(s),
             "task2_medium": lambda s: grade_task2(s),
@@ -576,7 +576,7 @@ class EnvDirectClient:
             "task5_deadline": lambda s: grade_task5(s, steps_used=self.env.total_steps if self.env else 100),
         }
         grader = graders.get(task_id)
-        return grader(student) if grader else 0.0
+        return grader(student) if grader else 0.0001
 
 
 def get_client(use_http: bool = True) -> object:
