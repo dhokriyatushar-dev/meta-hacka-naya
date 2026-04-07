@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 
 # Install python dependencies
 COPY backend/requirements.txt ./requirements.txt
-RUN pip install uv && uv pip install --system --no-cache -r requirements.txt
+RUN pip install uv && uv pip install --system --no-cache --index-strategy unsafe-best-match -r requirements.txt
 
 # Copy project files
 COPY backend/ ./backend/
