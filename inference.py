@@ -17,6 +17,8 @@ import requests
 from datetime import datetime, timezone
 from typing import List, Optional, Dict
 
+from openai import OpenAI
+
 # Add backend to path for direct mode
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 
@@ -32,7 +34,7 @@ SERVER_URL = os.getenv("SERVER_URL", "http://localhost:7860")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+IMAGE_NAME = os.getenv("IMAGE_NAME")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -68,8 +70,6 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
 def _get_openai_client():
     """Get OpenAI-compatible client using required env vars."""
     try:
-        from openai import OpenAI
-
         if not API_BASE_URL:
             return None, MODEL_NAME  # Fallback to rule-based
 
