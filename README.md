@@ -278,3 +278,4 @@ This creates a clear **curriculum**: recommend → quiz → (adapt if fail) → 
 - **Storage**: In-memory + JSON file persistence (no external DB required)
 - **Deploy**: Docker-ready, HuggingFace Spaces compatible (port 7860)
 - **Spec**: OpenEnv compliant — `openenv.yaml`, typed models, `/reset`, `/step`, `/state`
+  URL Link:-https://edupathenv-ai.netlify.app/
