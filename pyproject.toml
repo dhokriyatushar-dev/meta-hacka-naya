@@ -5,16 +5,19 @@ description = "Personalized AI tutor RL environment — OpenEnv compliant"
 requires-python = ">=3.11"
 dependencies = [
     "openenv-core>=0.2.3",
-    "fastapi==0.115.0",
-    "uvicorn==0.30.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.35.0",
     "pydantic>=2.9.0",
-    "python-multipart==0.0.9",
+    "python-multipart>=0.0.18",
     "openai>=1.0.0",
     "pyyaml>=6.0.2",
     "aiofiles>=24.1.0",
     "requests>=2.31.0",
     "numpy>=1.24.0",
 ]
+
+[project.scripts]
+server = "server.app:main"
 
 [build-system]
 requires = ["setuptools"]
