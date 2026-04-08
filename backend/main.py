@@ -237,9 +237,16 @@ async def env_grade(request: GradeRequest):
         return {"error": f"Unknown task: {request.task_id}", "score": 0.0001}
 
     score = grader(student)
+    score = round(score, 4)
+    # Ensure score falls strictly within (0, 1)
+    if score <= 0.0:
+        score = 0.0001
+    elif score >= 1.0:
+        score = 0.9999
+        
     return {
         "task_id": request.task_id,
-        "score": round(score, 4),
+        "score": score,
         "student_id": env.student_id,
         "completed_topics": student.completed_topics,
         "job_readiness_score": student.job_readiness_score,
