@@ -30,7 +30,7 @@ def grade_task1(student: StudentProfile) -> float:
     ]
 
     if not student.completed_topics:
-        return 0.0001
+        return 0
 
     # Score: how many expected topics were completed
     correct = sum(1 for t in expected if t in student.completed_topics)
@@ -46,8 +46,10 @@ def grade_task1(student: StudentProfile) -> float:
                 order_bonus += 0.1
         completed_set.add(topic_id)
 
-    score = (correct / len(expected)) * 0.7 + min(order_bonus, 0.3)
-    return max(0.0001, min(0.9999, round(score, 4)))
+    score = round((correct / len(expected)) * 0.7 + min(order_bonus, 0.3), 4)
+    if score <= 0.0: return 0
+    if score >= 1.0: return 1
+    return score
 
 
 def grade_task2(student: StudentProfile) -> float:
@@ -78,8 +80,10 @@ def grade_task2(student: StudentProfile) -> float:
         if retried > 0:
             quiz_score = min(quiz_score + 0.1, 1.0)
 
-    final = (coverage_score * 0.5) + (quiz_score * 0.5)
-    return max(0.0001, min(0.9999, round(final, 4)))
+    final = round((coverage_score * 0.5) + (quiz_score * 0.5), 4)
+    if final <= 0.0: return 0
+    if final >= 1.0: return 1
+    return final
 
 
 def grade_task3(student: StudentProfile) -> float:
@@ -116,8 +120,10 @@ def grade_task3(student: StudentProfile) -> float:
     elif tech_completed or domain_completed:
         cross_domain = 0.3
 
-    final = (job_readiness * 0.4) + (efficiency * 0.3) + (cross_domain * 0.3)
-    return max(0.0001, min(0.9999, round(final, 4)))
+    final = round((job_readiness * 0.4) + (efficiency * 0.3) + (cross_domain * 0.3), 4)
+    if final <= 0.0: return 0
+    if final >= 1.0: return 1
+    return final
 
 
 def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
@@ -127,7 +133,7 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
             cross-domain bridging (15%) + all-complete bonus (15%).
     """
     if not students:
-        return 0.0001
+        return 0
 
     # 1. Min job readiness across all students (30%) — weakest link
     readiness_scores = [s.job_readiness_score for s in students]
@@ -155,14 +161,16 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
     # 5. Binary completion bonus (15%): all 3 students reach 0.7 readiness
     all_complete = 1.0 if all(r >= 0.7 for r in readiness_scores) else 0.0
 
-    final = (
+    final = round(
         min_readiness * 0.30 +
         avg_readiness * 0.20 +
         efficiency * 0.20 +
         cross_domain_score * 0.15 +
-        all_complete * 0.15
-    )
-    return max(0.0001, min(0.9999, round(final, 4)))
+        all_complete * 0.15,
+    4)
+    if final <= 0.0: return 0
+    if final >= 1.0: return 1
+    return final
 
 
 def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
@@ -219,11 +227,13 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
     # 5. Early completion bonus (10%): job_ready triggered before step 80
     early_bonus = 1.0 if (student.job_readiness_score >= 0.7 and steps_used < 80) else 0.0
 
-    final = (
+    final = round(
         job_readiness * 0.25 +
         milestone_rate * 0.25 +
         coverage * 0.20 +
         efficiency * 0.20 +
-        early_bonus * 0.10
-    )
-    return max(0.0001, min(0.9999, round(final, 4)))
+        early_bonus * 0.10,
+    4)
+    if final <= 0.0: return 0
+    if final >= 1.0: return 1
+    return final
