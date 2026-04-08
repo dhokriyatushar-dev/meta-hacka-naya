@@ -11,12 +11,10 @@ RUN apt-get update && \
 # Copy requirements first for Docker layer caching
 COPY backend/requirements.txt ./requirements.txt
 
-# Install PyTorch CPU wheel FIRST (pre-built, no compilation)
+# Install PyTorch CPU wheel (pre-built, no compilation) + all deps in one step
 RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
-
-# Install remaining deps (skip torch since already installed)
-RUN pip install --no-cache-dir -r requirements.txt
+    torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
 # ── Copy project files ──
 COPY backend/ ./backend/
