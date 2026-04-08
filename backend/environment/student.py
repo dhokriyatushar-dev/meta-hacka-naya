@@ -339,7 +339,7 @@ class StudentManager:
         raw_score = round(score / total_weight, 2) if total_weight > 0 else 0.0
         # Clamp to (0, 0.99) so graders never receive exactly 0.0 or 1.0
         if raw_score <= 0:
-            raw_score = 0.0
+            raw_score = 0.001
         elif raw_score >= 1:
             raw_score = 0.99
         student.job_readiness_score = raw_score

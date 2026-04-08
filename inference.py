@@ -60,7 +60,8 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     """Emit [END] structured log to stdout."""
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     success_val = str(success).lower()
-    print(f"[END] success={success_val} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+    # CRITICAL: Use :.4f (not :.2f) to prevent rounding 0.999→1.00 or 0.001→0.00
+    print(f"[END] success={success_val} steps={steps} score={score:.4f} rewards={rewards_str}", flush=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -800,6 +801,11 @@ def _run_reflexion_task(task_id: str, client, profile: dict,
                 break
 
         score = client.grade(task_id)
+        # CRITICAL: Ensure score is strictly within (0, 1)
+        if score <= 0:
+            score = 0.001
+        elif score >= 1:
+            score = 0.999
         success = score >= 0.8
         log_end(success=success, steps=step_count, score=score, rewards=rewards_list)
 

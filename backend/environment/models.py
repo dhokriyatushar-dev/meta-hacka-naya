@@ -122,7 +122,7 @@ class StudentProfile(BaseModel):
     quiz_history: List[QuizResult] = []
     completed_projects: List[str] = []
     badges: List[Badge] = []
-    job_readiness_score: float = 0
+    job_readiness_score: float = 0.001
     total_study_hours: float = 0
     quiz_streak: int = 0
     # Resource tracking
