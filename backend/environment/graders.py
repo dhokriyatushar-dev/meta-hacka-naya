@@ -67,7 +67,7 @@ def grade_task2(student: StudentProfile) -> float:
     coverage_score = covered / len(data_analyst_topics)
 
     # 2. Quiz performance (50%): average quiz score and adaptation
-    quiz_score = 0.0
+    quiz_score = 0
     if student.quiz_history:
         avg = sum(q.score for q in student.quiz_history) / len(student.quiz_history)
         quiz_score = avg / 100.0
