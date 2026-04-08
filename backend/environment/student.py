@@ -311,8 +311,8 @@ class StudentManager:
 
     def _update_job_readiness(self, student: StudentProfile):
         """Calculate job readiness score based on progress."""
-        score = 0
-        total_weight = 0
+        score = 0.0
+        total_weight = 0.0
 
         # Topics completed (40% weight)
         if student.jd_required_skills:
@@ -322,7 +322,7 @@ class StudentManager:
             topic_score = matched / max(len(all_skills), 1)
         else:
             topic_score = len(student.completed_topics) / 15.0
-        score += min(topic_score, 1) * 0.4
+        score += min(topic_score, 1.0) * 0.4
         total_weight += 0.4
 
         # Quiz performance (30% weight)
@@ -333,10 +333,16 @@ class StudentManager:
 
         # Projects completed (30% weight)
         project_score = len(student.completed_projects) / 5.0
-        score += min(project_score, 1) * 0.3
+        score += min(project_score, 1.0) * 0.3
         total_weight += 0.3
 
-        student.job_readiness_score = round(score / total_weight, 2) if total_weight > 0 else 0
+        raw_score = round(score / total_weight, 2) if total_weight > 0 else 0.0
+        # Clamp to (0, 0.99) so graders never receive exactly 0.0 or 1.0
+        if raw_score <= 0:
+            raw_score = 0.0
+        elif raw_score >= 1:
+            raw_score = 0.99
+        student.job_readiness_score = raw_score
 
     def get_skill_levels(self, student_id: str) -> Dict[str, float]:
         """Get computed skill levels for a student."""
@@ -351,7 +357,7 @@ class StudentManager:
 
         # From completed topics (boost)
         for topic_id in student.completed_topics:
-            levels[topic_id] = min(levels.get(topic_id, 0) + 0.3, 1)
+            levels[topic_id] = min(levels.get(topic_id, 0) + 0.3, 0.99)
 
         # From quiz scores
         for q in student.quiz_history:

@@ -27,12 +27,15 @@ def _clamp_score(raw: float) -> float:
 
     Any value <= 0 becomes _SCORE_MIN (0.001).
     Any value >= 1 becomes _SCORE_MAX (0.999).
+    Rounding happens BEFORE boundary check to catch edge cases
+    like round(0.99996, 4) == 1.0.
     """
-    if raw <= 0:
+    score = round(raw, 4)
+    if score <= 0:
         return _SCORE_MIN
-    if raw >= 1:
+    if score >= 1:
         return _SCORE_MAX
-    return round(raw, 4)
+    return score
 
 
 def grade_task1(student: StudentProfile) -> float:
@@ -132,7 +135,7 @@ def grade_task3(student: StudentProfile) -> float:
     cross_domain = 0.0
     if tech_completed and domain_completed:
         balance = min(len(tech_completed), len(domain_completed)) / max(len(tech_completed), len(domain_completed))
-        cross_domain = balance
+        cross_domain = min(balance, 0.99)
     elif tech_completed or domain_completed:
         cross_domain = 0.3
 
@@ -157,7 +160,7 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
     avg_readiness = sum(readiness_scores) / len(readiness_scores) if readiness_scores else 0
 
     # 3. Efficiency (20%): 1 - steps_used/300
-    efficiency = max(0, 1.0 - steps_used / 300.0)
+    efficiency = min(max(0, 1.0 - steps_used / 300.0), 0.99)
 
     # 4. Cross-domain bridging quality (15%): count unique cross-domain topics
     cross_domain_topics = set()

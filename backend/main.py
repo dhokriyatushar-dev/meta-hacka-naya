@@ -10,8 +10,10 @@ import os
 import random
 import logging
 from typing import Optional, Dict, Any
+import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from api.onboarding import router as onboarding_router
@@ -209,7 +211,7 @@ async def env_state(request: StateRequest = None):
 async def env_grade(request: GradeRequest):
     """
     Grade the current session for a specific task.
-    Returns a score between 0 and 1.0.
+    Returns a score strictly between 0 and 1 (exclusive).
     """
     session_id = request.session_id or DEFAULT_SESSION
     env = env_sessions.get(session_id)
@@ -236,13 +238,12 @@ async def env_grade(request: GradeRequest):
     if not grader:
         return {"error": f"Unknown task: {request.task_id}", "score": 0.001}
 
-    score = round(grader(student), 4)
-    # Ensure score falls strictly within (0, 1)
+    score = grader(student)
+    # CRITICAL: Final safety net — ensure score is strictly within (0, 1)
     if score <= 0:
         score = 0.001
     elif score >= 1:
         score = 0.999
-        
     return {
         "task_id": request.task_id,
         "score": score,
@@ -254,19 +255,72 @@ async def env_grade(request: GradeRequest):
 
 # ═══ Existing API Endpoints ═══
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {
-        "name": "EduPath AI",
-        "version": "1.0.0",
-        "description": "Personalized Learning Tutor Environment",
-        "status": "running",
-        "endpoints": {
-            "reset": "POST /reset",
-            "step": "POST /step",
-            "state": "POST /state",
-        },
+    """Serve the interactive dashboard HTML."""
+    html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard", "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>Dashboard index.html not found</h1>"
+
+@app.get("/api/metrics")
+async def get_metrics():
+    """Get all available metrics from results directory."""
+    metrics = {
+        "learning_curves": {},
+        "evaluation_results": {},
+        "ablation_results": None,
+        "hrl_results": {},
+        "reflexion_memory": {},
     }
+    
+    RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results")
+    if not os.path.exists(RESULTS_DIR):
+        return metrics
+
+    for filename in os.listdir(RESULTS_DIR):
+        filepath = os.path.join(RESULTS_DIR, filename)
+        if not os.path.isfile(filepath):
+            continue
+        try:
+            with open(filepath, "r") as f:
+                data = json.load(f)
+
+            if filename.startswith("learning_curve"):
+                metrics["learning_curves"][filename] = data
+            elif filename.startswith("eval"):
+                metrics["evaluation_results"][filename] = data
+            elif filename.startswith("ablation"):
+                metrics["ablation_results"] = data
+            elif filename.startswith("hrl_"):
+                metrics["hrl_results"][filename] = data
+            elif filename.startswith("reflexion_"):
+                metrics["reflexion_memory"][filename] = data
+        except Exception:
+            continue
+
+    return metrics
+
+
+@app.get("/api/graph")
+async def get_curriculum_graph():
+    """Get the curriculum prerequisite graph for visualization."""
+    try:
+        nodes = []
+        links = []
+        for topic_id, topic in TOPIC_GRAPH.items():
+            nodes.append({
+                "id": topic_id,
+                "name": topic.name,
+                "field": topic.field,
+                "difficulty": topic.difficulty,
+            })
+            for prereq in topic.prerequisites:
+                links.append({"source": prereq, "target": topic_id})
+        return {"nodes": nodes, "links": links}
+    except Exception as e:
+        return {"error": str(e), "nodes": [], "links": []}
 
 
 @app.get("/health")
