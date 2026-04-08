@@ -186,7 +186,7 @@ def _extract_rating_from_text(text: str) -> Optional[float]:
 
 def _score_resource(resource: dict, topic_name: str) -> float:
     """Score a resource for relevance and quality (0-100)."""
-    score = 0.0
+    score = 0
 
     # Platform reputation (0-40 points)
     platform_score = _get_platform_score(resource["url"])
@@ -196,7 +196,7 @@ def _score_resource(resource: dict, topic_name: str) -> float:
     topic_words = set(topic_name.lower().split())
     title_words = set(resource["title"].lower().split())
     overlap = len(topic_words & title_words)
-    relevance = min(overlap / max(len(topic_words), 1), 1.0)
+    relevance = min(overlap / max(len(topic_words), 1), 1)
     score += relevance * 30
 
     # Review/rating presence (0-15 points)

@@ -178,14 +178,14 @@ class BKTModel:
         """
         for skill in self_assessed_skills:
             skill_name = skill.skill if hasattr(skill, 'skill') else skill.get('skill', '')
-            proficiency = skill.proficiency if hasattr(skill, 'proficiency') else skill.get('proficiency', 0.0)
+            proficiency = skill.proficiency if hasattr(skill, 'proficiency') else skill.get('proficiency', 0)
             skill_lower = skill_name.lower().replace(' ', '_')
 
             # Map proficiency directly to knowledge state
             for topic_id in TOPIC_GRAPH:
                 if skill_lower in topic_id or topic_id in skill_lower:
                     self.knowledge_states[topic_id] = max(
-                        self.knowledge_states.get(topic_id, 0.0),
+                        self.knowledge_states.get(topic_id, 0),
                         min(proficiency, 0.99)
                     )
 
@@ -195,6 +195,6 @@ class BKTModel:
             for topic_id in TOPIC_GRAPH:
                 if rs_lower in topic_id or topic_id in rs_lower:
                     self.knowledge_states[topic_id] = max(
-                        self.knowledge_states.get(topic_id, 0.0),
+                        self.knowledge_states.get(topic_id, 0),
                         0.25
                     )

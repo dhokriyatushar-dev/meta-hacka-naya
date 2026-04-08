@@ -77,7 +77,7 @@ class HierarchicalEduPathEnv(gymnasium.Env):
 
         # Observation: 15 (student) + 6 (strategy onehot) = 21
         self.observation_space = spaces.Box(
-            low=-1.0, high=2.0, shape=(21,), dtype=np.float32
+            low=-1, high=2.0, shape=(21,), dtype=np.float32
         )
 
         # Action: 7 action types × 6 strategies = 42
@@ -152,7 +152,7 @@ class HierarchicalEduPathEnv(gymnasium.Env):
         student_features = np.array([
             len(completed) / 30.0,                        # completion progress
             len(available) / 30.0,                        # available ratio
-            obs.get("job_readiness_score", 0.0),          # job readiness
+            obs.get("job_readiness_score", 0),          # job readiness
             len(quiz_history) / 30.0,                     # quiz coverage
             obs.get("total_steps", 0) / 100.0,            # step progress
             obs.get("badges_earned", 0) / 10.0,           # badges
@@ -160,16 +160,16 @@ class HierarchicalEduPathEnv(gymnasium.Env):
             len(obs.get("completed_projects", [])) / 5.0, # projects
             sum(quiz_history.values()) / max(len(quiz_history) * 100, 1),  # avg quiz score
             np.mean(list(mastery.values())) if mastery else 0.1,           # avg mastery
-            min(len(completed) / 5.0, 1.0),               # early progress
+            min(len(completed) / 5.0, 1),               # early progress
             self._total_steps / 100.0,                    # time pressure
-            1.0 if obs.get("current_topic") in completed else 0.0,  # current topic done
-            1.0 if len(available) == 0 else 0.0,          # no topics left
+            1 if obs.get("current_topic") in completed else 0,  # current topic done
+            1 if len(available) == 0 else 0,          # no topics left
             self._strategy_step_count / self.manager_interval,  # strategy progress
         ], dtype=np.float32)
 
         # Strategy one-hot (6 dims)
         strategy_onehot = np.zeros(6, dtype=np.float32)
-        strategy_onehot[self._current_strategy] = 1.0
+        strategy_onehot[self._current_strategy] = 1
 
         return np.concatenate([student_features, strategy_onehot])
 

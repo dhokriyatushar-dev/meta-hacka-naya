@@ -66,7 +66,7 @@ def upsert_student(student_data: dict) -> bool:
             "learning_goal": student_data.get("learning_goal", ""),
             "job_description": student_data.get("job_description", ""),
             "weekly_hours": student_data.get("weekly_hours", 10),
-            "job_readiness_score": student_data.get("job_readiness_score", 0.0),
+            "job_readiness_score": student_data.get("job_readiness_score", 0),
             "quiz_streak": student_data.get("quiz_streak", 0),
             "resume_skills": json.dumps(student_data.get("resume_skills", [])),
             "self_assessed_skills": json.dumps(student_data.get("self_assessed_skills", [])),
@@ -207,7 +207,7 @@ def get_roadmap(student_id: str) -> Optional[dict]:
 
 # ── Roadmap History Operations ──
 
-def archive_roadmap(student_id: str, roadmap_data: dict, topics_covered: list = None, completion_pct: float = 0.0) -> bool:
+def archive_roadmap(student_id: str, roadmap_data: dict, topics_covered: list = None, completion_pct: float = 0) -> bool:
     """Archive a roadmap to history before clearing it."""
     client = _get_client()
     if not client:
@@ -284,8 +284,8 @@ def save_progress_snapshot(student_id: str, snapshot: dict) -> bool:
             "topics_completed": snapshot.get("topics_completed", []),
             "quizzes_passed": snapshot.get("quizzes_passed", 0),
             "projects_completed": snapshot.get("projects_completed", 0),
-            "job_readiness_score": snapshot.get("job_readiness_score", 0.0),
-            "total_study_hours": snapshot.get("total_study_hours", 0.0),
+            "job_readiness_score": snapshot.get("job_readiness_score", 0),
+            "total_study_hours": snapshot.get("total_study_hours", 0),
         }
         client.table("progress_snapshots").insert(db_data).execute()
         return True

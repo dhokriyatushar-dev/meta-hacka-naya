@@ -73,13 +73,13 @@ def build_node_features(
 
     for i, topic_id in enumerate(ALL_TOPIC_IDS):
         topic = TOPIC_GRAPH[topic_id]
-        features[i, 0] = 1.0 if topic_id in completed_set else 0.0
-        features[i, 1] = 1.0 if topic_id in available_set else 0.0
+        features[i, 0] = 1 if topic_id in completed_set else 0
+        features[i, 1] = 1 if topic_id in available_set else 0
         features[i, 2] = mastery_probabilities.get(topic_id, 0.1)
         features[i, 3] = topic.difficulty / 5.0  # Normalize to 0-1
         # Domain one-hot (indices 4-8)
         domain_idx = DOMAIN_MAP.get(topic.field, 0)
-        features[i, 4 + domain_idx] = 1.0
+        features[i, 4 + domain_idx] = 1
 
     return features
 
@@ -108,10 +108,10 @@ def build_topic_mask(
     available_set = set(available_topics)
     for i, topic_id in enumerate(ALL_TOPIC_IDS):
         if topic_id in available_set:
-            mask[i] = 1.0
+            mask[i] = 1
     # If no topics available, allow all (fallback)
     if mask.sum() == 0:
-        mask[:] = 1.0
+        mask[:] = 1
     return mask
 
 

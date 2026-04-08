@@ -252,7 +252,7 @@ def run_rule_based(task_id: str, seed: int = 42, max_steps: int = None) -> tuple
     max_steps = max_steps or TASK_MAX_STEPS[task_id]
     env, student, observation = _create_env_and_student(task_id, seed)
 
-    total_reward = 0.0
+    total_reward = 0
     steps = 0
 
     for step in range(max_steps):
@@ -282,7 +282,7 @@ def run_react(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
     env, student, observation = _create_env_and_student(task_id, seed)
 
     agent = EvalReActAgent()
-    total_reward = 0.0
+    total_reward = 0
     steps = 0
 
     for step in range(max_steps):
@@ -332,7 +332,7 @@ def run_ppo(task_id: str, model_path: str = None, seed: int = 42, max_steps: int
     env = EduPathGymEnv(task_id=task_id, seed=seed)
     obs, _ = env.reset(seed=seed)
 
-    total_reward = 0.0
+    total_reward = 0
     steps = 0
     done = False
 
@@ -371,7 +371,7 @@ def run_ppo_gnn(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
     env = GNNGymWrapper(task_id=task_id, seed=seed)
     obs, _ = env.reset(seed=seed)
 
-    total_reward = 0.0
+    total_reward = 0
     steps = 0
     done = False
 
@@ -409,7 +409,7 @@ def run_hrl(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
     env = HierarchicalEduPathEnv(task_id=task_id, seed=seed)
     obs, _ = env.reset(seed=seed)
 
-    total_reward = 0.0
+    total_reward = 0
     steps = 0
     done = False
 
@@ -435,13 +435,13 @@ def run_reflexion(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
     from ai.reflexion_agent import ReflexionAgent
     agent = ReflexionAgent(max_reflections=5)
     best_score = 0
-    best_reward = 0.0
+    best_reward = 0
     best_steps = 0
 
     for ep in range(3):
         agent.new_episode()
         env, student, obs_dict = _create_env_and_student(task_id, seed + ep)
-        total_reward = 0.0
+        total_reward = 0
         
         for step in range(max_steps):
             action = agent.decide(obs_dict)
@@ -528,8 +528,8 @@ def evaluate_all(num_episodes: int = 10, results_dir: str = "results"):
                     "steps": steps,
                 })
 
-            mean_score = float(np.mean(scores)) if scores else 0.0
-            mean_reward = float(np.mean(rewards)) if rewards else 0.0
+            mean_score = float(np.mean(scores)) if scores else 0
+            mean_reward = float(np.mean(rewards)) if rewards else 0
             results[agent_type][task_id] = round(mean_score, 4)
             reward_results[agent_type][task_id] = round(mean_reward, 4)
             print(f"score={mean_score:.4f}  reward={mean_reward:.2f}")
@@ -543,8 +543,8 @@ def evaluate_all(num_episodes: int = 10, results_dir: str = "results"):
 
     for agent_type in agents:
         name = agent_display[agent_type]
-        task_scores = [results[agent_type].get(t, 0.0) for t in tasks]
-        avg = sum(task_scores) / len(task_scores) if task_scores else 0.0
+        task_scores = [results[agent_type].get(t, 0) for t in tasks]
+        avg = sum(task_scores) / len(task_scores) if task_scores else 0
         scores_str = " | ".join(f"{s:>6.3f}" for s in task_scores)
         print(f"  {name:<18} | {scores_str} | {avg:>6.3f}")
 

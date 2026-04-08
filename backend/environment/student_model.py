@@ -31,7 +31,7 @@ class StudentDifficultyModel:
 
     def __init__(self, seed: int = 42):
         self._rng = random.Random(seed)
-        self.skill_levels: Dict[str, float] = {}  # topic_id -> 0.0-1.0
+        self.skill_levels: Dict[str, float] = {}  # topic_id -> 0-1
         self.bkt = BKTModel()  # Bayesian Knowledge Tracing model
 
     def reset(self, seed: int = 42):
@@ -45,13 +45,13 @@ class StudentDifficultyModel:
         # Initialize legacy skill levels (kept for backward compatibility)
         for skill in self_assessed_skills:
             skill_name = skill.skill if hasattr(skill, 'skill') else skill.get('skill', '')
-            proficiency = skill.proficiency if hasattr(skill, 'proficiency') else skill.get('proficiency', 0.0)
+            proficiency = skill.proficiency if hasattr(skill, 'proficiency') else skill.get('proficiency', 0)
             skill_lower = skill_name.lower().replace(' ', '_')
             self.skill_levels[skill_lower] = proficiency
             for topic_id in TOPIC_GRAPH:
                 if skill_lower in topic_id or topic_id in skill_lower:
                     self.skill_levels[topic_id] = max(
-                        self.skill_levels.get(topic_id, 0.0), proficiency
+                        self.skill_levels.get(topic_id, 0), proficiency
                     )
 
         for rs in resume_skills:
@@ -59,7 +59,7 @@ class StudentDifficultyModel:
             for topic_id in TOPIC_GRAPH:
                 if rs_lower in topic_id or topic_id in rs_lower:
                     self.skill_levels[topic_id] = max(
-                        self.skill_levels.get(topic_id, 0.0), 0.2
+                        self.skill_levels.get(topic_id, 0), 0.2
                     )
 
         # Initialize BKT model from the same data
@@ -92,9 +92,9 @@ class StudentDifficultyModel:
             prereq_skills.append(self.bkt.get_p_known(prereq_id))
         avg_prereq_mastery = (
             sum(prereq_skills) / max(len(prereq_skills), 1)
-            if prereq_skills else 0.0
+            if prereq_skills else 0
         )
-        skill_multiplier = 1.0 + (avg_prereq_mastery * 0.3)
+        skill_multiplier = 1 + (avg_prereq_mastery * 0.3)
 
         # Order bonus: +15 if all prereqs completed in correct order
         order_bonus = 0
@@ -120,10 +120,10 @@ class StudentDifficultyModel:
         # Update legacy skill levels
         if passed:
             current = self.skill_levels.get(topic_id, 0.3)
-            self.skill_levels[topic_id] = min(current + 0.3, 1.0)
+            self.skill_levels[topic_id] = min(current + 0.3, 1)
         else:
             current = self.skill_levels.get(topic_id, 0.3)
-            self.skill_levels[topic_id] = min(current + 0.05, 1.0)
+            self.skill_levels[topic_id] = min(current + 0.05, 1)
 
     def update_skill_after_project(self, related_topic_ids: List[str]):
         """Update skill levels and BKT after completing a mini project."""
@@ -133,7 +133,7 @@ class StudentDifficultyModel:
         # Update legacy skill levels
         for topic_id in related_topic_ids:
             current = self.skill_levels.get(topic_id, 0.3)
-            self.skill_levels[topic_id] = min(current + 0.1, 1.0)
+            self.skill_levels[topic_id] = min(current + 0.1, 1)
 
     def update_skill_after_capstone(self, field: str):
         """Update skill levels and BKT after completing a capstone project."""
@@ -143,8 +143,8 @@ class StudentDifficultyModel:
         # Update legacy skill levels
         for topic_id, topic in TOPIC_GRAPH.items():
             if topic.field == field:
-                current = self.skill_levels.get(topic_id, 0.0)
-                self.skill_levels[topic_id] = min(current + 0.2, 1.0)
+                current = self.skill_levels.get(topic_id, 0)
+                self.skill_levels[topic_id] = min(current + 0.2, 1)
 
     def update_skill_after_topic_study(self, topic_id: str):
         """Update skill and BKT when a topic is recommended/studied."""
@@ -152,8 +152,8 @@ class StudentDifficultyModel:
         self.bkt.update_from_study(topic_id)
 
         # Update legacy skill levels
-        current = self.skill_levels.get(topic_id, 0.0)
-        self.skill_levels[topic_id] = min(current + 0.25, 1.0)
+        current = self.skill_levels.get(topic_id, 0)
+        self.skill_levels[topic_id] = min(current + 0.25, 1)
 
     def get_skill(self, topic_id: str) -> float:
         """Get current skill level for a topic."""

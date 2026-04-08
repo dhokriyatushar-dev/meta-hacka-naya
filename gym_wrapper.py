@@ -120,7 +120,7 @@ class EduPathGymEnv(gymnasium.Env):
         # [13] topics_since_last_project (/ 10)
         # [14] current_topic_skill (0-1)
         self.observation_space = spaces.Box(
-            low=0.0, high=1.0, shape=(15,), dtype=np.float32
+            low=0, high=1, shape=(15,), dtype=np.float32
         )
 
         self.env = None
@@ -173,26 +173,26 @@ class EduPathGymEnv(gymnasium.Env):
         total_steps = obs.get("total_steps", 0)
 
         # Compute derived features
-        avg_quiz = (sum(quiz_history.values()) / max(len(quiz_history), 1)) if quiz_history else 0.0
-        avg_skill = (sum(skill_levels.values()) / max(len(skill_levels), 1)) if skill_levels else 0.0
+        avg_quiz = (sum(quiz_history.values()) / max(len(quiz_history), 1)) if quiz_history else 0
+        avg_skill = (sum(skill_levels.values()) / max(len(skill_levels), 1)) if skill_levels else 0
         num_quizzes = len(quiz_history)
-        quiz_pass_rate = (sum(1 for s in quiz_history.values() if s >= 70) / max(num_quizzes, 1)) if num_quizzes > 0 else 0.0
+        quiz_pass_rate = (sum(1 for s in quiz_history.values() if s >= 70) / max(num_quizzes, 1)) if num_quizzes > 0 else 0
         topics_since_project = len(completed) - len(projects) * 3
 
         current_topic = obs.get("current_topic")
-        current_skill = skill_levels.get(current_topic, 0.0) if current_topic else 0.0
+        current_skill = skill_levels.get(current_topic, 0) if current_topic else 0
 
         features = np.array([
             len(completed) / 32.0,                          # [0]
             len(available) / 32.0,                          # [1]
-            obs.get("job_readiness_score", 0.0),            # [2]
+            obs.get("job_readiness_score", 0),            # [2]
             avg_quiz / 100.0,                               # [3]
             len(projects) / 12.0,                           # [4]
             avg_skill,                                      # [5]
             obs.get("badges_earned", 0) / 30.0,             # [6]
             total_steps / 100.0,                            # [7]
             obs.get("weekly_hours", 10) / 20.0,             # [8]
-            1.0 if current_topic else 0.0,                  # [9]
+            1 if current_topic else 0,                  # [9]
             num_quizzes / 50.0,                             # [10]
             quiz_pass_rate,                                 # [11]
             max(0, (100 - total_steps)) / 100.0,            # [12]
@@ -200,7 +200,7 @@ class EduPathGymEnv(gymnasium.Env):
             current_skill,                                  # [14]
         ], dtype=np.float32)
 
-        return np.clip(features, 0.0, 1.0)
+        return np.clip(features, 0, 1)
 
     def _decode_action(self, action_int: int) -> Action:
         """Convert integer action to Action object with heuristic topic/project selection."""
@@ -314,7 +314,7 @@ class GNNGymWrapper(gymnasium.Env):
         num_edges = self._static_edge_index.shape[1]
         obs_dim = (self._num_topics * 9) + 4 + self._num_topics
         self.observation_space = spaces.Box(
-            low=-1.0, high=2.0, shape=(obs_dim,), dtype=np.float32
+            low=-1, high=2.0, shape=(obs_dim,), dtype=np.float32
         )
 
         self.env = None
@@ -360,7 +360,7 @@ class GNNGymWrapper(gymnasium.Env):
         extrinsic_reward = result.reward.value
 
         # Add curiosity bonus if enabled
-        intrinsic_reward = 0.0
+        intrinsic_reward = 0
         if self._icm:
             topic_id = pydantic_action.topic_id or "none"
             intrinsic_reward = self._icm.get_bonus(topic_id, pydantic_action.type.value)
@@ -390,7 +390,7 @@ class GNNGymWrapper(gymnasium.Env):
 
         # Scalar features (4)
         scalar_feat = self._build_scalar_features(
-            obs.get("job_readiness_score", 0.0),
+            obs.get("job_readiness_score", 0),
             obs.get("badges_earned", 0),
             obs.get("total_steps", 0),
             obs.get("weekly_hours", 10),

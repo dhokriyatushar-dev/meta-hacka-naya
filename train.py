@@ -129,7 +129,7 @@ def train_ppo(
     eval_rewards = []
     for ep in range(10):
         obs, _ = env.reset(seed=seed + ep)
-        episode_reward = 0.0
+        episode_reward = 0
         done = False
         steps = 0
         while not done and steps < 100:

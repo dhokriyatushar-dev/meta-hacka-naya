@@ -209,7 +209,7 @@ async def env_state(request: StateRequest = None):
 async def env_grade(request: GradeRequest):
     """
     Grade the current session for a specific task.
-    Returns a score between 0.0 and 1.0.
+    Returns a score between 0 and 1.0.
     """
     session_id = request.session_id or DEFAULT_SESSION
     env = env_sessions.get(session_id)
@@ -238,9 +238,9 @@ async def env_grade(request: GradeRequest):
 
     score = round(grader(student), 4)
     # Ensure score falls within [0, 1] using integer 0 and 1 for boundaries
-    if score <= 0.0:
+    if score <= 0:
         score = 0
-    elif score >= 1.0:
+    elif score >= 1:
         score = 1
         
     return {

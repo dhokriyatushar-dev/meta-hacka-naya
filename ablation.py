@@ -99,7 +99,7 @@ def run_rule_episode(task_id: str, seed: int) -> tuple:
 
     obs = env.reset(student_id=student.id, seed=seed)
     obs_dict = obs.model_dump()
-    total_reward = 0.0
+    total_reward = 0
     max_steps = TASK_MAX_STEPS[task_id]
 
     for step in range(max_steps):
@@ -129,7 +129,7 @@ def run_react_episode(task_id: str, seed: int) -> tuple:
 
     obs = env.reset(student_id=student.id, seed=seed)
     obs_dict = obs.model_dump()
-    total_reward = 0.0
+    total_reward = 0
     max_steps = TASK_MAX_STEPS[task_id]
 
     # Scratchpad state
@@ -170,8 +170,8 @@ def run_reflexion_episode(task_id: str, seed: int, episodes: int = 3) -> tuple:
     from ai.reflexion_agent import ReflexionAgent
 
     agent = ReflexionAgent(max_reflections=5)
-    best_score = 0.0
-    best_reward = 0.0
+    best_score = 0
+    best_reward = 0
     best_steps = 0
 
     for ep in range(episodes):
@@ -184,7 +184,7 @@ def run_reflexion_episode(task_id: str, seed: int, episodes: int = 3) -> tuple:
 
         obs = env.reset(student_id=student.id, seed=seed + ep)
         obs_dict = obs.model_dump()
-        total_reward = 0.0
+        total_reward = 0
         max_steps = TASK_MAX_STEPS[task_id]
 
         for step in range(max_steps):
@@ -226,7 +226,7 @@ def run_ppo_episode(task_id: str, seed: int, model_prefix: str = "ppo_edupath") 
         model = PPO.load(model_path)
         env = EduPathGymEnv(task_id=task_id, seed=seed)
         obs, _ = env.reset(seed=seed)
-        total_reward = 0.0
+        total_reward = 0
         max_steps = TASK_MAX_STEPS[task_id]
 
         for step in range(max_steps):
@@ -237,7 +237,7 @@ def run_ppo_episode(task_id: str, seed: int, model_prefix: str = "ppo_edupath") 
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0.0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0
         return score, total_reward, step + 1
 
     except ImportError:
@@ -258,7 +258,7 @@ def run_ppo_gnn_episode(task_id: str, seed: int) -> tuple:
         model = PPO.load(model_path)
         env = GNNGymWrapper(task_id=task_id, seed=seed)
         obs, _ = env.reset(seed=seed)
-        total_reward = 0.0
+        total_reward = 0
         max_steps = TASK_MAX_STEPS[task_id]
 
         for step in range(max_steps):
@@ -269,7 +269,7 @@ def run_ppo_gnn_episode(task_id: str, seed: int) -> tuple:
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0.0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0
         return score, total_reward, step + 1
 
     except ImportError:
@@ -289,7 +289,7 @@ def run_hrl_episode(task_id: str, seed: int) -> tuple:
         model = PPO.load(model_path)
         env = HierarchicalEduPathEnv(task_id=task_id, seed=seed)
         obs, _ = env.reset(seed=seed)
-        total_reward = 0.0
+        total_reward = 0
         max_steps = TASK_MAX_STEPS[task_id]
 
         for step in range(max_steps):
@@ -300,7 +300,7 @@ def run_hrl_episode(task_id: str, seed: int) -> tuple:
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0.0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0
         return score, total_reward, step + 1
 
     except ImportError:
@@ -474,7 +474,7 @@ def run_ablation(num_episodes: int = 5, agents: List[str] = None):
 
     baseline_avg = None
     for agent_type in agents:
-        scores = [results[agent_type].get(t, 0.0) for t in TASKS]
+        scores = [results[agent_type].get(t, 0) for t in TASKS]
         avg = sum(scores) / len(scores)
         if baseline_avg is None:
             baseline_avg = avg
@@ -507,7 +507,7 @@ def run_ablation(num_episodes: int = 5, agents: List[str] = None):
     md_lines.append("|-------|--------|--------|--------|--------|--------|-------------|")
 
     for agent_type in agents:
-        scores = [results[agent_type].get(t, 0.0) for t in TASKS]
+        scores = [results[agent_type].get(t, 0) for t in TASKS]
         avg = sum(scores) / len(scores)
         scores_str = " | ".join(f"{s:.4f}" for s in scores)
         md_lines.append(f"| {agent_type} | {scores_str} | **{avg:.4f}** |")

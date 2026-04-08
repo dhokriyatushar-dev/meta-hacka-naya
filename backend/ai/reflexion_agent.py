@@ -81,7 +81,7 @@ class EpisodeTrajectory:
 
     def __init__(self):
         self.steps: List[Dict] = []
-        self.total_reward = 0.0
+        self.total_reward = 0
         self.topics_completed: List[str] = []
         self.topics_failed: List[str] = []
         self.projects_completed: int = 0
@@ -96,7 +96,7 @@ class EpisodeTrajectory:
             "reward": reward,
             "done": done,
             "completed_topics": len(observation.get("completed_topics", [])),
-            "job_readiness": observation.get("job_readiness_score", 0.0),
+            "job_readiness": observation.get("job_readiness_score", 0),
         })
         self.total_reward += reward
 
@@ -127,7 +127,7 @@ class EpisodeTrajectory:
         return {
             "total_steps": len(self.steps),
             "total_reward": self.total_reward,
-            "score": self.steps[-1]["job_readiness"] if self.steps else 0.0,
+            "score": self.steps[-1]["job_readiness"] if self.steps else 0,
             "topics_completed": self.topics_completed,
             "topics_failed": self.topics_failed,
             "projects_completed": self.projects_completed,
@@ -272,7 +272,7 @@ class ReflexionAgent:
             self.trajectory.projects_completed += 1
             self.topics_since_project = 0
 
-    def reflect(self, final_score: float = 0.0):
+    def reflect(self, final_score: float = 0):
         """Generate a reflection on the completed episode."""
         summary = self.trajectory.get_summary()
         summary["score"] = final_score

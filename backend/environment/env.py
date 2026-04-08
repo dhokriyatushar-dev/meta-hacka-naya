@@ -71,7 +71,7 @@ class EduPathEnv:
         if self.done:
             return StepResult(
                 observation=self._get_observation(),
-                reward=Reward(value=0.0, reason="Episode already done", is_terminal=True),
+                reward=Reward(value=0, reason="Episode already done", is_terminal=True),
                 done=True,
                 info={"error": "Episode already done"}
             )
@@ -189,7 +189,7 @@ class EduPathEnv:
             elif simulated_score >= 50:
                 return Reward(value=0.1, reason=f"Quiz partial (score: {simulated_score}%)")
             else:
-                return Reward(value=0.0, reason=f"Quiz failed (score: {simulated_score}%)")
+                return Reward(value=0, reason=f"Quiz failed (score: {simulated_score}%)")
 
         # ── assign_mini_project ──
         elif action.type == ActionType.ASSIGN_MINI_PROJECT:
@@ -217,7 +217,7 @@ class EduPathEnv:
             resources = get_resources_for_topic(action.topic_id or "")
             if resources:
                 return Reward(value=0.1, reason="Resource recommended")
-            return Reward(value=0.0, reason="No resources found for topic")
+            return Reward(value=0, reason="No resources found for topic")
 
         # ── suggest_event ──
         elif action.type == ActionType.SUGGEST_EVENT:
@@ -226,11 +226,11 @@ class EduPathEnv:
         # ── mark_job_ready ──
         elif action.type == ActionType.MARK_JOB_READY:
             if student.job_readiness_score >= 0.8:
-                return Reward(value=1.0, reason="Student is job-ready!", is_terminal=True)
+                return Reward(value=1, reason="Student is job-ready!", is_terminal=True)
             else:
                 return Reward(value=-0.2, reason=f"Not job-ready yet (score: {student.job_readiness_score})")
 
-        return Reward(value=0.0, reason="Unknown action")
+        return Reward(value=0, reason="Unknown action")
 
     def _execute_action(self, action: Action) -> Dict:
         """Execute the action and update student state."""
@@ -246,7 +246,7 @@ class EduPathEnv:
                 )
                 from environment.models import SkillLevel
                 if existing_skill:
-                    existing_skill.proficiency = min(existing_skill.proficiency + 0.3, 1.0)
+                    existing_skill.proficiency = min(existing_skill.proficiency + 0.3, 1)
                 else:
                     student.self_assessed_skills.append(
                         SkillLevel(skill=action.topic_id, level="Studied", proficiency=0.5)

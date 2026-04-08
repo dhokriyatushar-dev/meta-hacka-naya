@@ -83,7 +83,7 @@ class ProjectMilestone(BaseModel):
 class SkillLevel(BaseModel):
     skill: str
     level: str  # e.g., "Know till Loops", "Beginner", "Advanced"
-    proficiency: float = 0.0  # 0.0 to 1.0
+    proficiency: float = 0  # 0 to 1
 
 
 class QuizResult(BaseModel):
@@ -122,8 +122,8 @@ class StudentProfile(BaseModel):
     quiz_history: List[QuizResult] = []
     completed_projects: List[str] = []
     badges: List[Badge] = []
-    job_readiness_score: float = 0.0
-    total_study_hours: float = 0.0
+    job_readiness_score: float = 0
+    total_study_hours: float = 0
     quiz_streak: int = 0
     # Resource tracking
     clicked_resource_links: Dict[str, List[str]] = {}  # topic_id -> [urls]

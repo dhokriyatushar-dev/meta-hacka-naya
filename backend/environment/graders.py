@@ -2,7 +2,7 @@
 EduPath AI — Deterministic Task Graders
 Team KRIYA | Meta Hackathon 2026
 
-Five task graders (Task 1–5) that score agent performance on a 0.0–1.0
+Five task graders (Task 1–5) that score agent performance on a 0–1
 scale. Each grader evaluates a different tutoring scenario:
   Task 1 (Easy):   Python beginner — topic sequencing & prerequisite ordering
   Task 2 (Medium): Data Analyst prep — topic coverage + quiz performance
@@ -19,7 +19,7 @@ def grade_task1(student: StudentProfile) -> float:
     """
     Task 1 (Easy): Complete beginner wants to learn Python from scratch.
     Agent must sequence 5 topics correctly, respecting all prerequisites.
-    Grader: % of expected topics completed (0.0 – 1.0)
+    Grader: % of expected topics completed (0 – 1)
     """
     expected = [
         "python_basics",
@@ -36,7 +36,7 @@ def grade_task1(student: StudentProfile) -> float:
     correct = sum(1 for t in expected if t in student.completed_topics)
 
     # Bonus: check prerequisite ordering was respected in completion order
-    order_bonus = 0.0
+    order_bonus = 0
     completed_set = set()
     for topic_id in student.completed_topics:
         topic = TOPIC_GRAPH.get(topic_id)
@@ -47,8 +47,8 @@ def grade_task1(student: StudentProfile) -> float:
         completed_set.add(topic_id)
 
     score = round((correct / len(expected)) * 0.7 + min(order_bonus, 0.3), 4)
-    if score <= 0.0: return 0
-    if score >= 1.0: return 1
+    if score <= 0: return 0
+    if score >= 1: return 1
     return score
 
 
@@ -78,11 +78,11 @@ def grade_task2(student: StudentProfile) -> float:
             topics_quizzed[q.topic_id] = topics_quizzed.get(q.topic_id, 0) + 1
         retried = sum(1 for count in topics_quizzed.values() if count > 1)
         if retried > 0:
-            quiz_score = min(quiz_score + 0.1, 1.0)
+            quiz_score = min(quiz_score + 0.1, 1)
 
     final = round((coverage_score * 0.5) + (quiz_score * 0.5), 4)
-    if final <= 0.0: return 0
-    if final >= 1.0: return 1
+    if final <= 0: return 0
+    if final >= 1: return 1
     return final
 
 
@@ -107,13 +107,13 @@ def grade_task3(student: StudentProfile) -> float:
 
     # 2. Topic efficiency (30%): more completed topics = better
     topic_count = len(student.completed_topics)
-    efficiency = min(topic_count / 8.0, 1.0)  # 8 topics is good pace
+    efficiency = min(topic_count / 8.0, 1)  # 8 topics is good pace
 
     # 3. Cross-domain bridging (30%): both tech and healthcare topics?
     tech_completed = [t for t in student.completed_topics if TOPIC_GRAPH.get(t) and TOPIC_GRAPH[t].field == "tech"]
     domain_completed = [t for t in student.completed_topics if TOPIC_GRAPH.get(t) and TOPIC_GRAPH[t].field == "healthcare"]
 
-    cross_domain = 0.0
+    cross_domain = 0
     if tech_completed and domain_completed:
         balance = min(len(tech_completed), len(domain_completed)) / max(len(tech_completed), len(domain_completed))
         cross_domain = balance
@@ -121,8 +121,8 @@ def grade_task3(student: StudentProfile) -> float:
         cross_domain = 0.3
 
     final = round((job_readiness * 0.4) + (efficiency * 0.3) + (cross_domain * 0.3), 4)
-    if final <= 0.0: return 0
-    if final >= 1.0: return 1
+    if final <= 0: return 0
+    if final >= 1: return 1
     return final
 
 
@@ -137,13 +137,13 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
 
     # 1. Min job readiness across all students (30%) — weakest link
     readiness_scores = [s.job_readiness_score for s in students]
-    min_readiness = min(readiness_scores) if readiness_scores else 0.0
+    min_readiness = min(readiness_scores) if readiness_scores else 0
 
     # 2. Average job readiness (20%)
-    avg_readiness = sum(readiness_scores) / len(readiness_scores) if readiness_scores else 0.0
+    avg_readiness = sum(readiness_scores) / len(readiness_scores) if readiness_scores else 0
 
     # 3. Efficiency (20%): 1 - steps_used/300
-    efficiency = max(0, 1.0 - steps_used / 300.0)
+    efficiency = max(0, 1 - steps_used / 300.0)
 
     # 4. Cross-domain bridging quality (15%): count unique cross-domain topics
     cross_domain_topics = set()
@@ -156,10 +156,10 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
             # Also count tech topics for non-tech students as cross-domain
             elif topic and topic.field == "tech" and target != "tech":
                 cross_domain_topics.add(topic_id)
-    cross_domain_score = min(len(cross_domain_topics) / 9.0, 1.0)
+    cross_domain_score = min(len(cross_domain_topics) / 9.0, 1)
 
     # 5. Binary completion bonus (15%): all 3 students reach 0.7 readiness
-    all_complete = 1.0 if all(r >= 0.7 for r in readiness_scores) else 0.0
+    all_complete = 1 if all(r >= 0.7 for r in readiness_scores) else 0
 
     final = round(
         min_readiness * 0.30 +
@@ -168,8 +168,8 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
         cross_domain_score * 0.15 +
         all_complete * 0.15,
     4)
-    if final <= 0.0: return 0
-    if final >= 1.0: return 1
+    if final <= 0: return 0
+    if final >= 1: return 1
     return final
 
 
@@ -219,13 +219,13 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
     # 4. Efficiency (20%): topics per step vs optimal (1 topic per 5 steps)
     if steps_used > 0:
         topics_per_step = len(student.completed_topics) / steps_used
-        optimal_rate = 1.0 / 5.0  # 1 topic per 5 steps is optimal
-        efficiency = min(topics_per_step / optimal_rate, 1.0)
+        optimal_rate = 1 / 5.0  # 1 topic per 5 steps is optimal
+        efficiency = min(topics_per_step / optimal_rate, 1)
     else:
-        efficiency = 0.0
+        efficiency = 0
 
     # 5. Early completion bonus (10%): job_ready triggered before step 80
-    early_bonus = 1.0 if (student.job_readiness_score >= 0.7 and steps_used < 80) else 0.0
+    early_bonus = 1 if (student.job_readiness_score >= 0.7 and steps_used < 80) else 0
 
     final = round(
         job_readiness * 0.25 +
@@ -234,6 +234,6 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
         efficiency * 0.20 +
         early_bonus * 0.10,
     4)
-    if final <= 0.0: return 0
-    if final >= 1.0: return 1
+    if final <= 0: return 0
+    if final >= 1: return 1
     return final

@@ -57,7 +57,7 @@ async def get_progress(student_id: str):
         "topics_completed": student.completed_topics if student else [],
         "topics_studied": student.topics_studied if student else [],
         "quiz_streak": student.quiz_streak if student else 0,
-        "job_readiness_score": student.job_readiness_score if student else 0.0,
+        "job_readiness_score": student.job_readiness_score if student else 0,
         "badges_earned": len([b for b in (student.badges if student else []) if isinstance(b, dict) and b.get("earned")]),
     }
 

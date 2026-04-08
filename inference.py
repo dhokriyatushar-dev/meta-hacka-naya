@@ -710,7 +710,7 @@ def run_task(task_id: str, client, mode: str = "react", episodes: int = 1) -> fl
             # Execute action via environment
             result = client.step(action)
 
-            reward_val = result.get("reward", {}).get("value", 0.0)
+            reward_val = result.get("reward", {}).get("value", 0)
             done = result.get("done", False)
 
             rewards_list.append(reward_val)
@@ -772,7 +772,7 @@ def _run_reflexion_task(task_id: str, client, profile: dict,
             step_count = step + 1
 
             result = client.step(action)
-            reward_val = result.get("reward", {}).get("value", 0.0)
+            reward_val = result.get("reward", {}).get("value", 0)
             done = result.get("done", False)
             rewards_list.append(reward_val)
 
