@@ -9,3 +9,13 @@ frontend/
 node_modules/
 backend/data/*.json
 backend/db/*.sqlite3
+results/
+uv.lock
+uv_error.txt
+push_error.txt
+push_error_fixed.txt
+push_result.txt
+git_diff.txt
+git_status.txt
+*.md
+!README.md

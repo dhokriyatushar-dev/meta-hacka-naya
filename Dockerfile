@@ -2,14 +2,23 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (needed for compiling C++ extensions like torch-scatter)
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+# Install only essential system deps (git needed by some pip packages)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# ── Install Python dependencies ──
+# Copy requirements first for Docker layer caching
 COPY backend/requirements.txt ./requirements.txt
-RUN pip install uv && uv pip install --system --no-cache --index-strategy unsafe-best-match -r requirements.txt
 
-# Copy project files
+# Install PyTorch CPU wheel FIRST (pre-built, no compilation)
+RUN pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining deps (skip torch since already installed)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Copy project files ──
 COPY backend/ ./backend/
 COPY inference.py .
 COPY gym_wrapper.py .
@@ -21,8 +30,13 @@ COPY tasks/ ./tasks/
 COPY dashboard/ ./dashboard/
 COPY openenv.yaml .
 COPY README.md .
-# Copy trained models and results (create dirs if absent)
+COPY server/ ./server/
+
+# Create dirs for models and results
 RUN mkdir -p ./models ./results
+
+# Copy pre-trained models if they exist
+COPY models/ ./models/
 
 # Required env vars (set at runtime)
 ENV API_BASE_URL=""
