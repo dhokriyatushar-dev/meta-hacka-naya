@@ -96,7 +96,7 @@ def _get_grader(task_id: str, steps_used: int = 0):
         return lambda student: grade_task4([student], steps_used=steps_used)
     elif task_id == "task5_deadline":
         return lambda student: grade_task5(student, steps_used=steps_used)
-    return lambda student: 0
+    return lambda student: 0.001
 
 
 # ═══════════════════════════════════════════════════════════
@@ -317,7 +317,7 @@ def run_ppo(task_id: str, model_path: str = None, seed: int = 42, max_steps: int
         from gym_wrapper import EduPathGymEnv
     except ImportError:
         print("  ⚠ stable-baselines3 not installed, skipping PPO evaluation")
-        return 0.0001, 0, 0
+        return 0.001, 0, 0
 
     max_steps = max_steps or TASK_MAX_STEPS[task_id]
 
@@ -326,7 +326,7 @@ def run_ppo(task_id: str, model_path: str = None, seed: int = 42, max_steps: int
 
     if not os.path.exists(model_path + ".zip"):
         print(f"  ⚠ PPO model not found at {model_path}.zip, skipping")
-        return 0.0001, 0, 0
+        return 0.001, 0, 0
 
     model = PPOModel.load(model_path)
     env = EduPathGymEnv(task_id=task_id, seed=seed)
@@ -349,7 +349,7 @@ def run_ppo(task_id: str, model_path: str = None, seed: int = 42, max_steps: int
         grader = _get_grader(task_id, steps_used=steps)
         score = grader(student)
     else:
-        score = 0.0001
+        score = 0.001
     return score, total_reward, steps
 
 
@@ -387,7 +387,7 @@ def run_ppo_gnn(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
         grader = _get_grader(task_id, steps_used=steps)
         score = grader(student)
     else:
-        score = 0.0001
+        score = 0.001
     return score, total_reward, steps
 
 
@@ -425,7 +425,7 @@ def run_hrl(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
         grader = _get_grader(task_id, steps_used=steps)
         score = grader(student)
     else:
-        score = 0.0001
+        score = 0.001
     return score, total_reward, steps
 
 
@@ -434,7 +434,7 @@ def run_reflexion(task_id: str, seed: int = 42, max_steps: int = None) -> tuple:
     max_steps = max_steps or TASK_MAX_STEPS[task_id]
     from ai.reflexion_agent import ReflexionAgent
     agent = ReflexionAgent(max_reflections=5)
-    best_score = 0
+    best_score = 0.001
     best_reward = 0
     best_steps = 0
 

@@ -214,11 +214,11 @@ async def env_grade(request: GradeRequest):
     session_id = request.session_id or DEFAULT_SESSION
     env = env_sessions.get(session_id)
     if not env:
-        return {"error": "No active session. Call /reset first.", "score": 0.0001}
+        return {"error": "No active session. Call /reset first.", "score": 0.001}
 
     student = student_manager.get(env.student_id)
     if not student:
-        return {"error": "Student not found.", "score": 0.0001}
+        return {"error": "Student not found.", "score": 0.001}
 
     graders = {
         "task1_easy": lambda s: grade_task1(s),
@@ -234,14 +234,14 @@ async def env_grade(request: GradeRequest):
         pass
     grader = graders.get(request.task_id)
     if not grader:
-        return {"error": f"Unknown task: {request.task_id}", "score": 0.0001}
+        return {"error": f"Unknown task: {request.task_id}", "score": 0.001}
 
     score = round(grader(student), 4)
     # Ensure score falls strictly within (0, 1)
     if score <= 0:
-        score = 0.0001
+        score = 0.001
     elif score >= 1:
-        score = 0.9999
+        score = 0.999
         
     return {
         "task_id": request.task_id,

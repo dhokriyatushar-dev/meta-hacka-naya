@@ -170,7 +170,7 @@ def run_reflexion_episode(task_id: str, seed: int, episodes: int = 3) -> tuple:
     from ai.reflexion_agent import ReflexionAgent
 
     agent = ReflexionAgent(max_reflections=5)
-    best_score = 0
+    best_score = 0.001
     best_reward = 0
     best_steps = 0
 
@@ -237,7 +237,7 @@ def run_ppo_episode(task_id: str, seed: int, model_prefix: str = "ppo_edupath") 
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0.001
         return score, total_reward, step + 1
 
     except ImportError:
@@ -269,7 +269,7 @@ def run_ppo_gnn_episode(task_id: str, seed: int) -> tuple:
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0.001
         return score, total_reward, step + 1
 
     except ImportError:
@@ -300,7 +300,7 @@ def run_hrl_episode(task_id: str, seed: int) -> tuple:
                 break
 
         student = student_manager.get(env._student_id)
-        score = _get_grader_fn(task_id, student, step + 1) if student else 0
+        score = _get_grader_fn(task_id, student, step + 1) if student else 0.001
         return score, total_reward, step + 1
 
     except ImportError:

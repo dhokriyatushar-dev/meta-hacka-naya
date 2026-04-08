@@ -30,7 +30,7 @@ def grade_task1(student: StudentProfile) -> float:
     ]
 
     if not student.completed_topics:
-        return 0.0001
+        return 0.001
 
     # Score: how many expected topics were completed
     correct = sum(1 for t in expected if t in student.completed_topics)
@@ -47,8 +47,8 @@ def grade_task1(student: StudentProfile) -> float:
         completed_set.add(topic_id)
 
     score = round((correct / len(expected)) * 0.7 + min(order_bonus, 0.3), 4)
-    if score <= 0: return 0.0001
-    if score >= 1: return 0.9999
+    if score <= 0: return 0.001
+    if score >= 1: return 0.999
     return score
 
 
@@ -81,8 +81,8 @@ def grade_task2(student: StudentProfile) -> float:
             quiz_score = min(quiz_score + 0.1, 1)
 
     final = round((coverage_score * 0.5) + (quiz_score * 0.5), 4)
-    if final <= 0: return 0.0001
-    if final >= 1: return 0.9999
+    if final <= 0: return 0.001
+    if final >= 1: return 0.999
     return final
 
 
@@ -121,8 +121,8 @@ def grade_task3(student: StudentProfile) -> float:
         cross_domain = 0.3
 
     final = round((job_readiness * 0.4) + (efficiency * 0.3) + (cross_domain * 0.3), 4)
-    if final <= 0: return 0.0001
-    if final >= 1: return 0.9999
+    if final <= 0: return 0.001
+    if final >= 1: return 0.999
     return final
 
 
@@ -133,7 +133,7 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
             cross-domain bridging (15%) + all-complete bonus (15%).
     """
     if not students:
-        return 0.0001
+        return 0.001
 
     # 1. Min job readiness across all students (30%) — weakest link
     readiness_scores = [s.job_readiness_score for s in students]
@@ -168,8 +168,8 @@ def grade_task4(students: List[StudentProfile], steps_used: int = 300) -> float:
         cross_domain_score * 0.15 +
         all_complete * 0.15,
     4)
-    if final <= 0: return 0.0001
-    if final >= 1: return 0.9999
+    if final <= 0: return 0.001
+    if final >= 1: return 0.999
     return final
 
 
@@ -234,6 +234,6 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
         efficiency * 0.20 +
         early_bonus * 0.10,
     4)
-    if final <= 0: return 0.0001
-    if final >= 1: return 0.9999
+    if final <= 0: return 0.001
+    if final >= 1: return 0.999
     return final

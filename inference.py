@@ -491,7 +491,7 @@ class EnvHTTPClient:
         )
         resp.raise_for_status()
         data = resp.json()
-        return data.get("score", 0.0001)
+        return data.get("score", 0.001)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -567,7 +567,7 @@ class EnvDirectClient:
         from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
         student = self.student_manager.get(self._current_student_id)
         if not student:
-            return 0.0001
+            return 0.001
         graders = {
             "task1_easy": lambda s: grade_task1(s),
             "task2_medium": lambda s: grade_task2(s),
@@ -576,7 +576,7 @@ class EnvDirectClient:
             "task5_deadline": lambda s: grade_task5(s, steps_used=self.env.total_steps if self.env else 100),
         }
         grader = graders.get(task_id)
-        return grader(student) if grader else 0
+        return grader(student) if grader else 0.001
 
 
 def get_client(use_http: bool = True) -> object:
@@ -698,7 +698,7 @@ def run_task(task_id: str, client, mode: str = "react", episodes: int = 1) -> fl
 
     rewards_list: List[float] = []
     step_count = 0
-    score = 0
+    score = 0.001
     success = False
 
     try:
@@ -754,7 +754,7 @@ def _run_reflexion_task(task_id: str, client, profile: dict,
     from ai.reflexion_agent import ReflexionAgent
 
     agent = ReflexionAgent(max_reflections=5)
-    best_score = 0
+    best_score = 0.001
 
     for ep in range(episodes):
         agent.new_episode()
