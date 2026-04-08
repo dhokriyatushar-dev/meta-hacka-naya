@@ -21,7 +21,7 @@ from environment.env import EduPathEnv
 from environment.models import Action, ActionType, QuizDifficulty
 from environment.student import student_manager
 from environment.curriculum import TOPIC_GRAPH, get_available_topics
-from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
+from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5, _clamp_score
 
 
 TASK_PROFILES = {
@@ -85,17 +85,18 @@ TASK_MAX_STEPS = {
 
 
 def _get_grader(task_id: str, steps_used: int = 0):
-    """Get the appropriate grader function for a task."""
+    """Get the appropriate grader function for a task.
+    All grader outputs are clamped to (0, 1) as a safety net."""
     if task_id == "task1_easy":
-        return lambda student: grade_task1(student)
+        return lambda student: _clamp_score(grade_task1(student))
     elif task_id == "task2_medium":
-        return lambda student: grade_task2(student)
+        return lambda student: _clamp_score(grade_task2(student))
     elif task_id == "task3_hard":
-        return lambda student: grade_task3(student)
+        return lambda student: _clamp_score(grade_task3(student))
     elif task_id == "task4_team":
-        return lambda student: grade_task4([student], steps_used=steps_used)
+        return lambda student: _clamp_score(grade_task4([student], steps_used=steps_used))
     elif task_id == "task5_deadline":
-        return lambda student: grade_task5(student, steps_used=steps_used)
+        return lambda student: _clamp_score(grade_task5(student, steps_used=steps_used))
     return lambda student: 0.001
 
 

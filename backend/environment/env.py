@@ -226,7 +226,7 @@ class EduPathEnv:
         # ── mark_job_ready ──
         elif action.type == ActionType.MARK_JOB_READY:
             if student.job_readiness_score >= 0.8:
-                return Reward(value=1, reason="Student is job-ready!", is_terminal=True)
+                return Reward(value=0.99, reason="Student is job-ready!", is_terminal=True)
             else:
                 return Reward(value=-0.2, reason=f"Not job-ready yet (score: {student.job_readiness_score})")
 
@@ -246,7 +246,7 @@ class EduPathEnv:
                 )
                 from environment.models import SkillLevel
                 if existing_skill:
-                    existing_skill.proficiency = min(existing_skill.proficiency + 0.3, 1)
+                    existing_skill.proficiency = min(existing_skill.proficiency + 0.3, 0.99)
                 else:
                     student.self_assessed_skills.append(
                         SkillLevel(skill=action.topic_id, level="Studied", proficiency=0.5)

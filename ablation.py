@@ -77,8 +77,9 @@ TASK_MAX_STEPS = {
 
 
 def _get_grader_fn(task_id: str, student, steps_used: int) -> float:
-    """Grade a student using the appropriate task grader."""
-    from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5
+    """Grade a student using the appropriate task grader.
+    All scores are clamped to (0, 1) as a safety net."""
+    from environment.graders import grade_task1, grade_task2, grade_task3, grade_task4, grade_task5, _clamp_score
     graders = {
         "task1_easy": lambda s: grade_task1(s),
         "task2_medium": lambda s: grade_task2(s),
@@ -86,7 +87,8 @@ def _get_grader_fn(task_id: str, student, steps_used: int) -> float:
         "task4_team": lambda s: grade_task4([s], steps_used=steps_used),
         "task5_deadline": lambda s: grade_task5(s, steps_used=steps_used),
     }
-    return graders[task_id](student)
+    raw = graders[task_id](student)
+    return _clamp_score(raw)
 
 
 def run_rule_episode(task_id: str, seed: int) -> tuple:

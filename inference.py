@@ -576,7 +576,15 @@ class EnvDirectClient:
             "task5_deadline": lambda s: grade_task5(s, steps_used=self.env.total_steps if self.env else 100),
         }
         grader = graders.get(task_id)
-        return grader(student) if grader else 0.001
+        if grader:
+            score = grader(student)
+            # CRITICAL: Ensure score is strictly within (0, 1)
+            if score <= 0:
+                score = 0.001
+            elif score >= 1:
+                score = 0.999
+            return score
+        return 0.001
 
 
 def get_client(use_http: bool = True) -> object:
@@ -740,6 +748,11 @@ def run_task(task_id: str, client, mode: str = "react", episodes: int = 1) -> fl
 
         # Grade the task
         score = client.grade(task_id)
+        # CRITICAL: Ensure score is strictly within (0, 1)
+        if score <= 0:
+            score = 0.001
+        elif score >= 1:
+            score = 0.999
         success = score >= 0.8
     finally:
         # Always emit [END] even if an exception occurs
