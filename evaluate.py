@@ -96,7 +96,7 @@ def _get_grader(task_id: str, steps_used: int = 0):
         return lambda student: grade_task4([student], steps_used=steps_used)
     elif task_id == "task5_deadline":
         return lambda student: grade_task5(student, steps_used=steps_used)
-    return lambda student: 0.0
+    return lambda student: 0.0001
 
 
 # ═══════════════════════════════════════════════════════════
