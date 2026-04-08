@@ -85,13 +85,13 @@ def grade_task2(student: StudentProfile) -> float:
 
     # 1. Topic coverage (50%): how many DA topics completed
     covered = sum(1 for t in data_analyst_topics if t in student.completed_topics)
-    coverage_score = covered / len(data_analyst_topics)
+    coverage_score = min(covered / len(data_analyst_topics), 0.99)
 
     # 2. Quiz performance (50%): average quiz score and adaptation
     quiz_score = 0.0
     if student.quiz_history:
         avg = sum(q.score for q in student.quiz_history) / len(student.quiz_history)
-        quiz_score = avg / 100.0
+        quiz_score = min(avg / 100.0, 0.99)
 
         # Bonus for retries (adaptation evidence)
         topics_quizzed = {}
@@ -122,7 +122,7 @@ def grade_task3(student: StudentProfile) -> float:
             if skill.lower().replace("_", " ") in topic.lower().replace("_", " "):
                 jd_covered += 1
                 break
-    job_readiness = jd_covered / max(len(jd_skills), 1)
+    job_readiness = min(jd_covered / max(len(jd_skills), 1), 0.99)
 
     # 2. Topic efficiency (30%): more completed topics = better
     topic_count = len(student.completed_topics)
@@ -219,7 +219,7 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
     if student.job_readiness_score >= 0.7:
         milestones_hit += 1
 
-    milestone_rate = milestones_hit / total_milestones
+    milestone_rate = min(milestones_hit / total_milestones, 0.99)
 
     # 3. Skill coverage (20%): healthcare + tech + business all > 0.5 mastery
     fields_covered = set()
@@ -229,7 +229,7 @@ def grade_task5(student: StudentProfile, steps_used: int = 100) -> float:
             fields_covered.add(topic.field)
     # Need healthcare, tech, and business
     required_fields = {"healthcare", "tech", "business"}
-    coverage = len(fields_covered.intersection(required_fields)) / len(required_fields)
+    coverage = min(len(fields_covered.intersection(required_fields)) / len(required_fields), 0.99)
 
     # 4. Efficiency (20%): topics per step vs optimal (1 topic per 5 steps)
     if steps_used > 0:
